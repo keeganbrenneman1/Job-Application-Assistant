@@ -4,11 +4,12 @@
 // independently (see spec "Grounding & architecture").
 
 import { getAnthropic, MODEL } from "@/lib/ai/client";
+import { getFinalText, parseJsonResponse } from "@/lib/ai/json-response";
 import type { CompanyResearch } from "@/types";
 
 const SYSTEM_PROMPT = `You are a research assistant gathering current, checkable facts about a company for a job candidate's interview prep. Use the web search tool to find recent, real information. Do not invent facts — if something can't be found, say so plainly in that field rather than guessing.
 
-When you're done searching, respond with ONLY a JSON object (no markdown fences, no commentary) matching exactly this shape:
+It's fine to search multiple times and think out loud between searches. But your LAST message must contain ONLY a single JSON object — no preamble, no markdown code fences, no commentary before or after it — matching exactly this shape:
 {
   "basicInfo": "string — size, industry, funding stage/amount, HQ",
   "recentNews": "string — recent news, product launches, notable events (last ~6-12 months)",
@@ -16,23 +17,15 @@ When you're done searching, respond with ONLY a JSON object (no markdown fences,
   "sources": ["array of URLs used"]
 }`;
 
-function extractJson(text: string): unknown {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = fenced ? fenced[1] : text;
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start === -1 || end === -1) {
-    throw new Error("Research call did not return JSON.");
-  }
-  return JSON.parse(candidate.slice(start, end + 1));
-}
-
 export async function researchCompany(company: string, role: string): Promise<CompanyResearch> {
   const anthropic = getAnthropic();
 
   const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 2000,
+    // Generous headroom: this call can loop through several searches plus
+    // narration before its final JSON message, and a truncated response
+    // (stop_reason "max_tokens") looks identical to a malformed one.
+    max_tokens: 4096,
     system: SYSTEM_PROMPT,
     tools: [
       {
@@ -49,12 +42,8 @@ export async function researchCompany(company: string, role: string): Promise<Co
     ],
   });
 
-  const textBlock = message.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Research call returned no text content.");
-  }
-
-  const parsed = extractJson(textBlock.text) as Partial<CompanyResearch>;
+  const text = getFinalText(message.content);
+  const parsed = parseJsonResponse<Partial<CompanyResearch>>(text, "Research call", message.stop_reason);
 
   return {
     basicInfo: parsed.basicInfo || "Not found.",
