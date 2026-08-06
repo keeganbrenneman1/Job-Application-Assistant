@@ -5,6 +5,7 @@
 // "Grounding & architecture").
 
 import { getAnthropic, MODEL } from "@/lib/ai/client";
+import { getFinalText, parseJsonResponse } from "@/lib/ai/json-response";
 import type { CompanyResearch, PrepContent } from "@/types";
 
 const SYSTEM_PROMPT = `You are helping a job candidate prepare for a recruiter screen. You will be given their resume, the job description, and researched company facts. Produce a five-section prep doc.
@@ -24,17 +25,6 @@ Respond with ONLY a JSON object (no markdown fences, no commentary) matching exa
   "ask": "string",
   "logistics": "string"
 }`;
-
-function extractJson(text: string): unknown {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = fenced ? fenced[1] : text;
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start === -1 || end === -1) {
-    throw new Error("Generation call did not return JSON.");
-  }
-  return JSON.parse(candidate.slice(start, end + 1));
-}
 
 export async function generatePrepContent(
   resumeText: string,
@@ -69,12 +59,8 @@ ${resumeText}`,
     ],
   });
 
-  const textBlock = message.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Generation call returned no text content.");
-  }
-
-  const parsed = extractJson(textBlock.text) as Partial<PrepContent>;
+  const text = getFinalText(message.content);
+  const parsed = parseJsonResponse<Partial<PrepContent>>(text, "Generation call", message.stop_reason);
 
   return {
     company: parsed.company || "",
