@@ -1,0 +1,91 @@
+"use client";
+
+import { useState } from "react";
+import { ChevronDown, Building2, Target, HelpCircle, MessageSquareText, ClipboardList } from "lucide-react";
+import { theme, serifFont, sansFont } from "@/lib/theme";
+import type { Prep } from "@/types";
+
+const SECTIONS = [
+  { code: "01", key: "company", label: "Company", icon: Building2 },
+  { code: "02", key: "fit", label: "Fit", icon: Target },
+  { code: "03", key: "expect", label: "Expect", icon: HelpCircle },
+  { code: "04", key: "ask", label: "Ask", icon: MessageSquareText },
+  { code: "05", key: "logistics", label: "Logistics", icon: ClipboardList },
+] as const;
+
+interface DossierDocProps {
+  company: string;
+  role: string;
+  prep: Prep;
+}
+
+export function DossierDoc({ company, role, prep }: DossierDocProps) {
+  const [open, setOpen] = useState<string | null>("company");
+  const date = new Date(prep.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+  return (
+    <div>
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[11px] tracking-wide" style={{ color: theme.brass, fontFamily: sansFont }}>
+            {date}
+          </div>
+          <h1 style={{ fontFamily: serifFont }} className="text-2xl mt-0.5">
+            {company}
+          </h1>
+          <p className="text-sm" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+            {role}
+          </p>
+        </div>
+        {prep.source === "mock" && (
+          <span
+            className="text-[10px] uppercase tracking-wide px-2 py-1 border shrink-0"
+            style={{ borderColor: theme.brassDim, color: theme.brassDim, fontFamily: sansFont }}
+            title="Generated from the hard-coded example response (MOCK_MODE=true), not a live Claude call."
+          >
+            Mock
+          </span>
+        )}
+      </div>
+
+      <div className="border" style={{ borderColor: theme.rule }}>
+        {SECTIONS.map((s, i) => {
+          const isOpen = open === s.key;
+          const Icon = s.icon;
+          return (
+            <div key={s.key} style={{ borderTop: i === 0 ? "none" : `1px solid ${theme.rule}` }}>
+              <button
+                onClick={() => setOpen(isOpen ? null : s.key)}
+                className="w-full flex items-center justify-between px-3.5 py-3 cursor-pointer"
+                style={{ background: isOpen ? theme.panelRaised : "transparent" }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[10px]" style={{ color: isOpen ? theme.brass : theme.paperMuted, fontFamily: sansFont }}>
+                    {s.code}
+                  </span>
+                  <Icon size={14} color={isOpen ? theme.brass : theme.paperMuted} />
+                  <span className="text-sm" style={{ fontFamily: sansFont, fontWeight: 500, color: theme.paper }}>
+                    {s.label}
+                  </span>
+                </div>
+                <ChevronDown
+                  size={15}
+                  color={theme.paperMuted}
+                  style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 120ms" }}
+                />
+              </button>
+              {isOpen && (
+                <div
+                  className="px-3.5 pb-4 text-sm leading-relaxed"
+                  style={{ color: theme.paper, fontFamily: sansFont, opacity: 0.92 }}
+                >
+                  {prep.content[s.key]}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
