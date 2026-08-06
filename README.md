@@ -1,4 +1,4 @@
-# Recruiting Assistant
+# Job Application Assistant
 ## Why
 Faster, tailored interview prep grounded in the real job description, the candidate’s resume,
 and current company information — starting with the recruiter screen stage. Built for
