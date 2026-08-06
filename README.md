@@ -30,7 +30,7 @@ deployed or run against a live Claude API key.
 ## Stack
 Next.js 16 (App Router, TypeScript, Tailwind) on GitHub Codespaces (build) → Vercel +
 Supabase (deploy). `@anthropic-ai/sdk` with the web search tool for the grounded
-research call. `pdf-parse` / `mammoth` for deterministic resume parsing, `cheerio` for
+research call. `unpdf` / `mammoth` for deterministic resume parsing, `cheerio` for
 JD URL scraping.
 
 ## Running locally

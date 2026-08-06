@@ -13,14 +13,14 @@ export async function parseResumeFile(
   const lower = filename.toLowerCase();
 
   if (mimeType === "application/pdf" || lower.endsWith(".pdf")) {
-    const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: buffer });
-    try {
-      const result = await parser.getText();
-      return result.text.trim();
-    } finally {
-      await parser.destroy();
-    }
+    // unpdf ships a PDF.js build compiled for serverless/edge runtimes —
+    // no DOMMatrix/Canvas/browser globals required for text extraction,
+    // unlike pdf-parse's underlying pdfjs-dist, which assumes a DOM and
+    // breaks with "DOMMatrix is not defined" on Vercel's Node runtime.
+    const { getDocumentProxy, extractText } = await import("unpdf");
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const { text } = await extractText(pdf, { mergePages: true });
+    return text.trim();
   }
 
   if (

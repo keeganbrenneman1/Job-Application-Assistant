@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // pdf-parse/mammoth do Node-native file/module resolution that the
-  // default server bundler trips on — keep them as real dependencies
-  // instead of being bundled.
-  serverExternalPackages: ["pdf-parse", "mammoth"],
+  // mammoth does Node-native file/module resolution that the default
+  // server bundler trips on — keep it as a real dependency instead of
+  // being bundled.
+  serverExternalPackages: ["mammoth"],
 };
 
 export default nextConfig;
