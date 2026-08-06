@@ -14,14 +14,38 @@ Lightweight opportunity archive — revisit past preps by company/role, no login
 person profile picker).
 Resume is never persisted; only the generated prep doc is saved.
 ## Status
-In build. Spec and interactive prototype complete — see SPEC.md . Live implementation
-## What’s not built yet
-Additional interview stages beyond recruiter screen (v2)
-Interactive mock Q&A, stage tracker (v-next)
-Actual PDF/DOCX resume parsing and JD URL scraping (prototype uses paste-only)
+Scaffolded. Next.js (App Router, TypeScript, Tailwind) app implementing the full v1
+architecture from `job-assistant-spec.md`: deterministic resume/JD extraction, a
+two-call Claude pipeline (grounded research, then reasoning-only generation) behind a
+single swappable mock/live function, and Supabase-backed opportunity/prep storage with
+an in-memory fallback for local dev before a Supabase project is wired up. Not yet
+deployed or run against a live Claude API key.
+
+## What's not built yet
+- Additional interview stages beyond recruiter screen (v2)
+- Interactive mock Q&A, stage tracker (v-next)
+- Deployment to Vercel + a provisioned Supabase project
+- Real-key verification of the live research/generation calls (currently exercised via `MOCK_MODE=true`)
+
 ## Stack
-GitHub Codespaces (build) → Vercel + Supabase (deploy). Claude API with web search tool
-for the grounded research call.
+Next.js 16 (App Router, TypeScript, Tailwind) on GitHub Codespaces (build) → Vercel +
+Supabase (deploy). `@anthropic-ai/sdk` with the web search tool for the grounded
+research call. `pdf-parse` / `mammoth` for deterministic resume parsing, `cheerio` for
+JD URL scraping.
+
+## Running locally
+```
+npm install
+cp .env.example .env.local   # fill in ANTHROPIC_API_KEY, or set MOCK_MODE=true
+npm run dev
+```
+Without `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` set, opportunities/preps are kept
+in an in-memory store that resets on restart — enough to exercise the full flow before
+a Supabase project exists. Run `src/lib/supabase/schema.sql` against a Supabase project
+to enable real persistence. Use the "Load sample JD + resume" link on the New Prep tab
+for a cold-start demo without a real resume on hand.
+
 ## Process
-Built using a spec-first, prototype-before-code process — see SPEC.md decisions and .claude/agents/ for the review checklists used during build.
-for full architecture
+Built using a spec-first, prototype-before-code process — see `job-assistant-spec.md`
+for the locked architecture decisions and `.claude /agents/` for the review checklists
+(spec-critic, eng-architecture-reviewer, qa-smoke-test) used during build.
