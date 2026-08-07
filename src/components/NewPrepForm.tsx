@@ -111,6 +111,11 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
       } else {
         setJd(data.text);
         setJdFileName(file.name);
+        // Best-effort suggestion from Call 0 (see src/lib/ai/extract-jd-fields.ts) —
+        // only fills fields the user hasn't already typed into, and stays
+        // fully editable either way; never treated as authoritative.
+        if (data.company && !company.trim()) setCompany(data.company);
+        if (data.role && !role.trim()) setRole(data.role);
       }
     } catch {
       setError("Couldn't parse that file — paste the text instead.");
@@ -186,12 +191,15 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
         <label className={labelClass} style={labelStyle}>
           Job description
         </label>
-        <div className="flex gap-2 mb-2">
+        <p className="text-[11px] mb-2" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+          Paste the text below, fetch it from a URL, or upload the posting as a PDF.
+        </p>
+        <div className="flex gap-2 mb-1.5">
           <input
             value={jdUrl}
             onChange={(e) => setJdUrl(e.target.value)}
-            placeholder="Paste a URL to fetch, or skip and paste JD text below"
-            className="flex-1 px-3 py-2 text-sm outline-none"
+            placeholder="Paste a URL to fetch"
+            className="flex-1 px-3 py-2 text-sm outline-none min-w-0"
             style={inputStyle}
           />
           <button
@@ -202,8 +210,6 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
           >
             {fetchingJd ? "Fetching…" : "Fetch"}
           </button>
-        </div>
-        <div className="flex items-center gap-2 mb-2">
           <button
             onClick={() => jdFileInputRef.current?.click()}
             disabled={parsingJdFile}
@@ -212,11 +218,6 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
           >
             {parsingJdFile ? "Parsing…" : "Upload PDF"}
           </button>
-          {jdFileName && (
-            <span className="text-[11px]" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-              {jdFileName}
-            </span>
-          )}
           <input
             ref={jdFileInputRef}
             type="file"
@@ -229,12 +230,17 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
             }}
           />
         </div>
+        {jdFileName && (
+          <p className="text-[11px] mb-2" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+            {jdFileName}
+          </p>
+        )}
         <textarea
           value={jd}
           onChange={(e) => setJd(e.target.value)}
           placeholder="Paste the JD text"
           rows={5}
-          className="w-full px-3 py-2.5 text-sm outline-none"
+          className="w-full px-3 py-2.5 text-sm outline-none mt-2"
           style={inputStyle}
         />
       </div>

@@ -15,7 +15,7 @@ export interface GeneratePrepResult {
   source: "live" | "mock";
 }
 
-function isMockMode(): boolean {
+export function isMockMode(): boolean {
   return process.env.MOCK_MODE === "true" || !process.env.ANTHROPIC_API_KEY;
 }
 

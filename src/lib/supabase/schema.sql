@@ -1,6 +1,6 @@
 -- Job Application Assistant — Supabase schema (v1)
 --
--- Storage scope per job-assistant-spec.md: generated preps only.
+-- Storage scope per JOB APPLICATION ASSISTANT SPEC.md: generated preps only.
 -- Resumes are never written here — the app never has a resume-storage
 -- table, column, or bucket by design.
 --

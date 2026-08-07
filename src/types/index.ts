@@ -1,7 +1,7 @@
 // Shared types for the Job Application Assistant.
 // Resume text is deliberately NOT part of any persisted type — it lives only
 // in the request body of a single /api/generate call and is never written
-// to a database, file, or log (see job-assistant-spec.md "User & data model").
+// to a database, file, or log (see JOB APPLICATION ASSISTANT SPEC.md "User & data model").
 
 export type Profile = "keegan" | "spouse";
 

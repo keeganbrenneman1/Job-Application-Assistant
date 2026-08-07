@@ -3,12 +3,8 @@
 import { useState } from "react";
 import { ChevronDown, Building2, Target, HelpCircle, MessageSquareText, ClipboardList } from "lucide-react";
 import { theme, serifFont, sansFont } from "@/lib/theme";
+import { STAGE_LABEL } from "@/lib/constants";
 import type { Prep } from "@/types";
-
-// Hard-coded for v1 (recruiter screen is the only stage). v2 adds more
-// stages across the same prep-doc pattern — this label is what will need
-// to vary per prep once that lands (see job-assistant-spec.md v1/v2/v-next).
-const STAGE_LABEL = "Recruiter Screen Prep";
 
 const SECTIONS = [
   {

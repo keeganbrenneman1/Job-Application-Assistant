@@ -87,7 +87,7 @@ export async function addPrep(
   return prep;
 }
 
-// Shared across both profiles by design (see job-assistant-spec.md: a
+// Shared across both profiles by design (see JOB APPLICATION ASSISTANT SPEC.md: a
 // named 2-person tool, not multi-tenant). `owner` stays on the record to
 // track who generated each prep, but it's not a filter — both people see
 // the same opportunity list.
@@ -118,6 +118,27 @@ export async function listOpportunities(): Promise<OpportunitySummary[]> {
         .at(-1);
       return { ...o, latestPrepAt: latest ?? null };
     });
+}
+
+// Deletes the opportunity and its preps. Supabase cascades via the FK
+// (see src/lib/supabase/schema.sql "on delete cascade"); the in-memory
+// store does the equivalent by hand. Returns false if nothing matched.
+export async function deleteOpportunity(id: string): Promise<boolean> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { error, count } = await supabase
+      .from("opportunities")
+      .delete({ count: "exact" })
+      .eq("id", id);
+    if (error) throw new Error(`deleteOpportunity: ${error.message}`);
+    return (count ?? 0) > 0;
+  }
+
+  const db = memoryDB();
+  const before = db.opportunities.length;
+  db.opportunities = db.opportunities.filter((o) => o.id !== id);
+  db.preps = db.preps.filter((p) => p.opportunityId !== id);
+  return db.opportunities.length < before;
 }
 
 export async function getOpportunity(id: string): Promise<OpportunityWithPreps | null> {

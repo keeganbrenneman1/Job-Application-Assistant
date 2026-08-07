@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { extractDocumentText, UnsupportedDocumentFormatError } from "@/lib/extraction/document";
+import { extractJdFields } from "@/lib/ai/extract-jd-fields";
 
 export const runtime = "nodejs";
 
@@ -7,7 +8,9 @@ export const runtime = "nodejs";
 // someone saves the job posting page as a PDF. Same deterministic,
 // no-LLM extraction as the resume upload path (see
 // src/lib/extraction/document.ts); nothing here writes to disk or a
-// database.
+// database. Also runs the lightweight, best-effort company/role field
+// extraction (Call 0, see src/lib/ai/extract-jd-fields.ts) so the form
+// can suggest pre-fills — always editable, never authoritative.
 export async function POST(request: Request) {
   const formData = await request.formData();
   const file = formData.get("jd");
@@ -25,7 +28,8 @@ export async function POST(request: Request) {
         { status: 422 }
       );
     }
-    return NextResponse.json({ text });
+    const fields = await extractJdFields(text);
+    return NextResponse.json({ text, ...fields });
   } catch (err) {
     if (err instanceof UnsupportedDocumentFormatError) {
       return NextResponse.json({ error: err.message }, { status: 415 });

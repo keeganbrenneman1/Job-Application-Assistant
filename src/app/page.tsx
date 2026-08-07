@@ -27,7 +27,7 @@ export default function App() {
     if (stored === "keegan" || stored === "spouse") setProfileState(stored);
   }, []);
 
-  // Shared across both profiles — see job-assistant-spec.md "User & data
+  // Shared across both profiles — see JOB APPLICATION ASSISTANT SPEC.md "User & data
   // model". The profile picker only tags who generated a new prep; it
   // doesn't scope what's visible in the archive.
   const loadArchive = async () => {
@@ -74,6 +74,16 @@ export default function App() {
     const opportunity = data.opportunity as OpportunityWithPreps;
     setActiveOpportunity(opportunity);
     setActivePrepId(opportunity.preps[0]?.id ?? null);
+  };
+
+  const handleDeleteOpportunity = async (id: string) => {
+    const res = await fetch(`/api/opportunities/${id}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 404) {
+      const data = await res.json().catch(() => ({}));
+      window.alert(data.error || "Failed to delete opportunity.");
+      return;
+    }
+    setArchive((prev) => prev.filter((o) => o.id !== id));
   };
 
   const activePrep = activeOpportunity?.preps.find((p) => p.id === activePrepId) ?? null;
@@ -123,7 +133,12 @@ export default function App() {
       ) : view === "new" ? (
         <NewPrepForm onGenerate={handleGenerate} />
       ) : (
-        <Archive items={archive} loading={archiveLoading} onOpen={handleOpenOpportunity} />
+        <Archive
+          items={archive}
+          loading={archiveLoading}
+          onOpen={handleOpenOpportunity}
+          onDelete={handleDeleteOpportunity}
+        />
       )}
     </Chrome>
   );
