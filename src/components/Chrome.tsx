@@ -1,32 +1,22 @@
 "use client";
 
-import { FolderOpen, FilePlus, User } from "lucide-react";
+import { FolderOpen, FilePlus } from "lucide-react";
 import { theme, serifFont, sansFont } from "@/lib/theme";
-import { PROFILES, type Profile } from "@/types";
 
 export type View = "new" | "archive";
 
 interface ChromeProps {
-  profile: Profile;
-  setProfile: (p: Profile) => void;
   view: View;
   setView: (v: View) => void;
+  wide?: boolean;
   children: React.ReactNode;
 }
 
-export function Chrome({ profile, setProfile, view, setView, children }: ChromeProps) {
-  const profileLabel = PROFILES.find((p) => p.id === profile)?.label ?? profile;
-
-  const cycleProfile = () => {
-    const idx = PROFILES.findIndex((p) => p.id === profile);
-    const next = PROFILES[(idx + 1) % PROFILES.length];
-    setProfile(next.id);
-  };
-
+export function Chrome({ view, setView, wide, children }: ChromeProps) {
   return (
     <div className="min-h-screen w-full flex flex-col" style={{ background: theme.ink, color: theme.paper }}>
       <header
-        className="flex items-center justify-between px-5 py-4 border-b"
+        className="flex items-center px-5 py-4 border-b"
         style={{ borderColor: theme.rule, background: theme.panel }}
       >
         <div className="flex items-baseline gap-2">
@@ -37,14 +27,6 @@ export function Chrome({ profile, setProfile, view, setView, children }: ChromeP
             recruiter screen
           </span>
         </div>
-        <button
-          onClick={cycleProfile}
-          className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 border cursor-pointer"
-          style={{ borderColor: theme.rule, color: theme.paperMuted, fontFamily: sansFont }}
-        >
-          <User size={13} />
-          {profileLabel}
-        </button>
       </header>
 
       <nav className="flex border-b" style={{ borderColor: theme.rule, background: theme.panel }}>
@@ -70,7 +52,7 @@ export function Chrome({ profile, setProfile, view, setView, children }: ChromeP
         ))}
       </nav>
 
-      <main className="flex-1 px-5 py-6 max-w-xl w-full mx-auto">{children}</main>
+      <main className={`flex-1 px-5 py-6 w-full mx-auto ${wide ? "max-w-4xl" : "max-w-xl"}`}>{children}</main>
     </div>
   );
 }

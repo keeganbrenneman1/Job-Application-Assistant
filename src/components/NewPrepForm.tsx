@@ -3,8 +3,10 @@
 import { useRef, useState } from "react";
 import { theme, sansFont } from "@/lib/theme";
 import { SAMPLE_COMPANY, SAMPLE_JD, SAMPLE_RESUME, SAMPLE_ROLE } from "@/lib/sample-data";
+import { PROFILES, type Profile } from "@/types";
 
 export interface NewPrepInput {
+  owner: Profile;
   company: string;
   role: string;
   jdText: string;
@@ -26,6 +28,7 @@ const labelClass = "text-xs uppercase tracking-wide block mb-1.5";
 const labelStyle = { color: theme.paperMuted, fontFamily: sansFont };
 
 export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
+  const [applicant, setApplicant] = useState<Profile>("keegan");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [jd, setJd] = useState("");
@@ -129,7 +132,13 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
     setGenerating(true);
     setError(null);
     try {
-      await onGenerate({ company: company.trim(), role: role.trim(), jdText: jd, resumeText: resume });
+      await onGenerate({
+        owner: applicant,
+        company: company.trim(),
+        role: role.trim(),
+        jdText: jd,
+        resumeText: resume,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed.");
     } finally {
@@ -158,6 +167,28 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
         >
           Load sample JD + resume
         </button>
+      </div>
+
+      <div>
+        <label className={labelClass} style={labelStyle}>
+          Applicant
+        </label>
+        <div className="flex gap-2">
+          {PROFILES.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setApplicant(p.id)}
+              className="text-xs px-3 py-2 border cursor-pointer"
+              style={{
+                borderColor: applicant === p.id ? theme.brass : theme.rule,
+                color: applicant === p.id ? theme.brass : theme.paperMuted,
+                fontFamily: sansFont,
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

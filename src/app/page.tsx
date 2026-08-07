@@ -1,35 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Chrome, type View } from "@/components/Chrome";
 import { NewPrepForm, type NewPrepInput } from "@/components/NewPrepForm";
 import { DossierDoc } from "@/components/DossierDoc";
 import { Archive } from "@/components/Archive";
 import { theme, sansFont } from "@/lib/theme";
-import type { GenerateResponse, OpportunitySummary, OpportunityWithPreps, Profile } from "@/types";
-
-const PROFILE_STORAGE_KEY = "jaa-profile";
+import type { GenerateResponse, OpportunitySummary, OpportunityWithPreps } from "@/types";
 
 export default function App() {
-  const [profile, setProfileState] = useState<Profile>("keegan");
   const [view, setView] = useState<View>("new");
   const [archive, setArchive] = useState<OpportunitySummary[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(false);
   const [activeOpportunity, setActiveOpportunity] = useState<OpportunityWithPreps | null>(null);
   const [activePrepId, setActivePrepId] = useState<string | null>(null);
 
-  useEffect(() => {
-    // One-time hydration from client-only storage: server and first client
-    // render both use the "keegan" default, so there's no mismatch to
-    // reconcile — just a same-value read, not derived/cascading state.
-    const stored = window.localStorage.getItem(PROFILE_STORAGE_KEY);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored === "keegan" || stored === "spouse") setProfileState(stored);
-  }, []);
-
   // Shared across both profiles — see JOB APPLICATION ASSISTANT SPEC.md "User & data
-  // model". The profile picker only tags who generated a new prep; it
-  // doesn't scope what's visible in the archive.
+  // model". Who generated a prep is captured per-opportunity (set in the
+  // New Prep form itself), not by a global switcher — there's nothing here
+  // to scope the archive by.
   const loadArchive = async () => {
     setArchiveLoading(true);
     try {
@@ -41,13 +30,6 @@ export default function App() {
     }
   };
 
-  const setProfile = (p: Profile) => {
-    setProfileState(p);
-    window.localStorage.setItem(PROFILE_STORAGE_KEY, p);
-    setActiveOpportunity(null);
-    setActivePrepId(null);
-  };
-
   const changeView = (v: View) => {
     setView(v);
     if (v === "archive") loadArchive();
@@ -57,7 +39,7 @@ export default function App() {
     const res = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ owner: profile, ...input }),
+      body: JSON.stringify(input),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Generation failed.");
@@ -87,9 +69,10 @@ export default function App() {
   };
 
   const activePrep = activeOpportunity?.preps.find((p) => p.id === activePrepId) ?? null;
+  const showingArchive = view === "archive" && !(activeOpportunity && activePrep);
 
   return (
-    <Chrome profile={profile} setProfile={setProfile} view={view} setView={changeView}>
+    <Chrome view={view} setView={changeView} wide={showingArchive}>
       {activeOpportunity && activePrep ? (
         <div>
           <button
