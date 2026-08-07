@@ -6,12 +6,17 @@ import { theme, serifFont, sansFont } from "@/lib/theme";
 import { STAGE_LABEL } from "@/lib/constants";
 import type { Prep } from "@/types";
 
+// Section-level provenance labels — not per-sentence tagging. These
+// describe where each section's content came from (Call 1 research vs.
+// Call 2 reasoning vs. neither), not the content itself; the "subtext"
+// field below is the separate, existing description of what's inside.
 const SECTIONS = [
   {
     code: "01",
     key: "company",
     label: "Company",
     subtext: "funding, culture, and recent signals worth knowing",
+    provenance: "From live research — verify independently",
     icon: Building2,
   },
   {
@@ -19,6 +24,7 @@ const SECTIONS = [
     key: "fit",
     label: "Fit",
     subtext: "where your background matches what they're asking for",
+    provenance: "Reasoned from your resume + this JD",
     icon: Target,
   },
   {
@@ -26,6 +32,7 @@ const SECTIONS = [
     key: "expect",
     label: "Expect",
     subtext: "likely questions and how to frame your answers",
+    provenance: "Reasoned — typical for this stage",
     icon: HelpCircle,
   },
   {
@@ -33,6 +40,7 @@ const SECTIONS = [
     key: "ask",
     label: "Ask",
     subtext: "good questions to ask them",
+    provenance: "Suggested, not from the JD",
     icon: MessageSquareText,
   },
   {
@@ -40,6 +48,7 @@ const SECTIONS = [
     key: "logistics",
     label: "Logistics",
     subtext: "comp, availability, and practical details to confirm",
+    provenance: "Mixed — research where available, reasoned otherwise",
     icon: ClipboardList,
   },
 ] as const;
@@ -56,6 +65,13 @@ export function DossierDoc({ company, role, prep }: DossierDocProps) {
 
   return (
     <div>
+      <p
+        className="text-[11px] mb-4 pb-3 border-b"
+        style={{ color: theme.paperMuted, fontFamily: sansFont, borderColor: theme.rule }}
+      >
+        A starting point, not a replacement for the original posting.
+      </p>
+
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
           <div className="text-[11px] tracking-wide" style={{ color: theme.brass, fontFamily: sansFont }}>
@@ -111,6 +127,12 @@ export function DossierDoc({ company, role, prep }: DossierDocProps) {
                   </div>
                   <span className="text-[11px] pl-[42px]" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
                     {s.subtext}
+                  </span>
+                  <span
+                    className="text-[11px] pl-[42px] italic"
+                    style={{ color: theme.signal, fontFamily: sansFont }}
+                  >
+                    {s.provenance}
                   </span>
                 </div>
                 <ChevronDown
