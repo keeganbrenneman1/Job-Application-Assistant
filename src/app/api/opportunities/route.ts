@@ -3,7 +3,7 @@ import { listOpportunities } from "@/lib/store";
 
 export const runtime = "nodejs";
 
-// Shared across both profiles — see job-assistant-spec.md "User & data
+// Shared across both profiles — see JOB APPLICATION ASSISTANT SPEC.md "User & data
 // model" and src/lib/store.ts. No owner filter here.
 export async function GET() {
   try {
