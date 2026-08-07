@@ -52,12 +52,23 @@ function compareByKey(a: OpportunitySummary, b: OpportunitySummary, key: SortKey
   }
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { month: "numeric", day: "numeric", year: "2-digit" });
+function formatTimestamp(iso: string) {
+  return new Date(iso).toLocaleString(undefined, {
+    month: "numeric",
+    day: "numeric",
+    year: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 const headerCellClass = "px-2.5 py-2 text-[10px] uppercase tracking-wide font-medium text-left whitespace-nowrap";
-const cellClass = "px-2.5 py-2.5 text-sm truncate";
+const cellClass = "px-2.5 py-2.5 text-sm whitespace-nowrap";
+// Free-text fields (role/company) are user-entered and unbounded — cap
+// and truncate with a tooltip so one long value can't blow out the whole
+// table. Everything else (dates, the fixed stage label) is naturally
+// short, so it's left to size to its own content.
+const freeTextCellClass = cellClass + " max-w-[16rem] truncate";
 
 export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
@@ -124,7 +135,7 @@ export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
                 {item.role} – {item.company}
               </div>
               <div className="text-[11px] mt-0.5 truncate" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-                {formatDate(item.createdAt)} · {STAGE_LABEL}
+                {formatTimestamp(item.createdAt)} · {STAGE_LABEL}
               </div>
             </div>
             <button
@@ -141,15 +152,7 @@ export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
       </div>
 
       <div className="hidden sm:block overflow-x-auto border" style={{ borderColor: theme.rule }}>
-        <table className="w-full border-collapse table-fixed" style={{ fontFamily: sansFont }}>
-          <colgroup>
-            <col className="w-[22%]" />
-            <col className="w-[22%]" />
-            <col className="w-[14%]" />
-            <col className="w-[14%]" />
-            <col className="w-[22%]" />
-            <col className="w-[6%]" />
-          </colgroup>
+        <table className="w-full border-collapse table-auto" style={{ fontFamily: sansFont }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${theme.rule}` }}>
               {COLUMNS.map((col) => {
@@ -179,19 +182,19 @@ export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
                 className="cursor-pointer hover:opacity-80 transition-opacity"
                 style={{ borderBottom: `1px solid ${theme.rule}` }}
               >
-                <td className={cellClass} style={{ color: theme.paper }} title={item.role}>
+                <td className={freeTextCellClass} style={{ color: theme.paper }} title={item.role}>
                   {item.role}
                 </td>
-                <td className={cellClass} style={{ color: theme.paper }} title={item.company}>
+                <td className={freeTextCellClass} style={{ color: theme.paper }} title={item.company}>
                   {item.company}
                 </td>
                 <td className={cellClass + " text-xs"} style={{ color: theme.paperMuted }}>
-                  {formatDate(item.createdAt)}
+                  {formatTimestamp(item.createdAt)}
                 </td>
                 <td className={cellClass + " text-xs"} style={{ color: theme.paperMuted }}>
-                  {formatDate(updatedAt(item))}
+                  {formatTimestamp(updatedAt(item))}
                 </td>
-                <td className={cellClass + " text-xs"} style={{ color: theme.paperMuted }} title={STAGE_LABEL}>
+                <td className={cellClass + " text-xs"} style={{ color: theme.paperMuted }}>
                   {STAGE_LABEL}
                 </td>
                 <td className="px-2.5 py-2.5">
