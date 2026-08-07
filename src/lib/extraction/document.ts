@@ -1,11 +1,13 @@
-// Deterministic resume extraction — no LLM involved (see spec
+// Deterministic file-to-text extraction — no LLM involved (see spec
 // "Extraction (deterministic, no LLM): resume file parsing, JD URL
-// scraping"). The extracted text is returned to the caller and never
-// written to disk, a database, or a log.
+// scraping"). Shared by both the resume upload path and the JD PDF-upload
+// path (job postings saved as a PDF); the underlying parsing has never
+// been resume-specific. Extracted text is returned to the caller and
+// never written to disk, a database, or a log.
 
-export class UnsupportedResumeFormatError extends Error {}
+export class UnsupportedDocumentFormatError extends Error {}
 
-export async function parseResumeFile(
+export async function extractDocumentText(
   buffer: Buffer,
   filename: string,
   mimeType: string
@@ -36,7 +38,7 @@ export async function parseResumeFile(
     return buffer.toString("utf-8").trim();
   }
 
-  throw new UnsupportedResumeFormatError(
-    `Unsupported resume format: ${mimeType || filename}. Upload a PDF, DOCX, or TXT, or paste the text directly.`
+  throw new UnsupportedDocumentFormatError(
+    `Unsupported file format: ${mimeType || filename}. Upload a PDF, DOCX, or TXT, or paste the text directly.`
   );
 }

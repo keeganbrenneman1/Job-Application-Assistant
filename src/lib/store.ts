@@ -87,13 +87,16 @@ export async function addPrep(
   return prep;
 }
 
-export async function listOpportunities(owner: Profile): Promise<OpportunitySummary[]> {
+// Shared across both profiles by design (see job-assistant-spec.md: a
+// named 2-person tool, not multi-tenant). `owner` stays on the record to
+// track who generated each prep, but it's not a filter — both people see
+// the same opportunity list.
+export async function listOpportunities(): Promise<OpportunitySummary[]> {
   const supabase = getSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("opportunities")
       .select("*, preps(created_at)")
-      .eq("owner", owner)
       .order("created_at", { ascending: false });
     if (error) throw new Error(`listOpportunities: ${error.message}`);
     return (data ?? []).map((row) => {
@@ -107,8 +110,7 @@ export async function listOpportunities(owner: Profile): Promise<OpportunitySumm
   }
 
   return memoryDB()
-    .opportunities.filter((o) => o.owner === owner)
-    .map((o) => {
+    .opportunities.map((o) => {
       const latest = memoryDB()
         .preps.filter((p) => p.opportunityId === o.id)
         .map((p) => p.createdAt)
@@ -118,17 +120,13 @@ export async function listOpportunities(owner: Profile): Promise<OpportunitySumm
     });
 }
 
-export async function getOpportunity(
-  id: string,
-  owner: Profile
-): Promise<OpportunityWithPreps | null> {
+export async function getOpportunity(id: string): Promise<OpportunityWithPreps | null> {
   const supabase = getSupabase();
   if (supabase) {
     const { data: oppRow, error: oppError } = await supabase
       .from("opportunities")
       .select("*")
       .eq("id", id)
-      .eq("owner", owner)
       .maybeSingle();
     if (oppError) throw new Error(`getOpportunity: ${oppError.message}`);
     if (!oppRow) return null;
@@ -143,7 +141,7 @@ export async function getOpportunity(
     return { ...rowToOpportunity(oppRow), preps: (prepRows ?? []).map(rowToPrep) };
   }
 
-  const opportunity = memoryDB().opportunities.find((o) => o.id === id && o.owner === owner);
+  const opportunity = memoryDB().opportunities.find((o) => o.id === id);
   if (!opportunity) return null;
   const preps = memoryDB()
     .preps.filter((p) => p.opportunityId === id)

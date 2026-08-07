@@ -40,13 +40,8 @@ export function Archive({ items, loading, onOpen }: ArchiveProps) {
             className="flex items-center justify-between px-3.5 py-3 border text-left cursor-pointer"
             style={{ borderColor: theme.rule, background: theme.panel }}
           >
-            <div>
-              <div style={{ fontFamily: serifFont }} className="text-base">
-                {item.company}
-              </div>
-              <div className="text-xs" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-                {item.role}
-              </div>
+            <div style={{ fontFamily: serifFont }} className="text-base">
+              {item.role} – {item.company}
             </div>
             <span className="text-[11px]" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
               {date}

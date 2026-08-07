@@ -1,20 +1,13 @@
 import { NextResponse } from "next/server";
 import { listOpportunities } from "@/lib/store";
-import type { Profile } from "@/types";
 
 export const runtime = "nodejs";
 
-const VALID_PROFILES: Profile[] = ["keegan", "spouse"];
-
-export async function GET(request: Request) {
-  const owner = new URL(request.url).searchParams.get("owner") as Profile | null;
-
-  if (!owner || !VALID_PROFILES.includes(owner)) {
-    return NextResponse.json({ error: "owner query param must be 'keegan' or 'spouse'." }, { status: 400 });
-  }
-
+// Shared across both profiles — see job-assistant-spec.md "User & data
+// model" and src/lib/store.ts. No owner filter here.
+export async function GET() {
   try {
-    const opportunities = await listOpportunities(owner);
+    const opportunities = await listOpportunities();
     return NextResponse.json({ opportunities });
   } catch (err) {
     console.error("list opportunities failed", err);

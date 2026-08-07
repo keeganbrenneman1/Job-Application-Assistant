@@ -27,10 +27,13 @@ export default function App() {
     if (stored === "keegan" || stored === "spouse") setProfileState(stored);
   }, []);
 
-  const loadArchive = async (owner: Profile) => {
+  // Shared across both profiles — see job-assistant-spec.md "User & data
+  // model". The profile picker only tags who generated a new prep; it
+  // doesn't scope what's visible in the archive.
+  const loadArchive = async () => {
     setArchiveLoading(true);
     try {
-      const res = await fetch(`/api/opportunities?owner=${owner}`);
+      const res = await fetch("/api/opportunities");
       const data = await res.json();
       setArchive(res.ok ? data.opportunities : []);
     } finally {
@@ -43,12 +46,11 @@ export default function App() {
     window.localStorage.setItem(PROFILE_STORAGE_KEY, p);
     setActiveOpportunity(null);
     setActivePrepId(null);
-    if (view === "archive") loadArchive(p);
   };
 
   const changeView = (v: View) => {
     setView(v);
-    if (v === "archive") loadArchive(profile);
+    if (v === "archive") loadArchive();
   };
 
   const handleGenerate = async (input: NewPrepInput) => {
@@ -66,7 +68,7 @@ export default function App() {
   };
 
   const handleOpenOpportunity = async (id: string) => {
-    const res = await fetch(`/api/opportunities/${id}?owner=${profile}`);
+    const res = await fetch(`/api/opportunities/${id}`);
     const data = await res.json();
     if (!res.ok) return;
     const opportunity = data.opportunity as OpportunityWithPreps;
