@@ -30,18 +30,28 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
   const [role, setRole] = useState("");
   const [jd, setJd] = useState("");
   const [jdUrl, setJdUrl] = useState("");
+  const [jdFileName, setJdFileName] = useState<string | null>(null);
   const [resume, setResume] = useState("");
   const [resumeFileName, setResumeFileName] = useState<string | null>(null);
 
   const [fetchingJd, setFetchingJd] = useState(false);
+  const [parsingJdFile, setParsingJdFile] = useState(false);
   const [parsingResume, setParsingResume] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const jdFileInputRef = useRef<HTMLInputElement>(null);
+  const resumeFileInputRef = useRef<HTMLInputElement>(null);
 
   const canSubmit =
-    company.trim() && role.trim() && jd.trim() && resume.trim() && !generating && !fetchingJd && !parsingResume;
+    company.trim() &&
+    role.trim() &&
+    jd.trim() &&
+    resume.trim() &&
+    !generating &&
+    !fetchingJd &&
+    !parsingJdFile &&
+    !parsingResume;
 
   const handleFetchJd = async () => {
     if (!jdUrl.trim()) return;
@@ -58,6 +68,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
         setError(data.reason || "Couldn't fetch that JD — paste the text instead.");
       } else {
         setJd(data.text);
+        setJdFileName(null);
       }
     } catch {
       setError("Couldn't fetch that JD — paste the text instead.");
@@ -66,7 +77,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
     }
   };
 
-  const handleFileUpload = async (file: File) => {
+  const handleResumeFileUpload = async (file: File) => {
     setParsingResume(true);
     setError(null);
     try {
@@ -84,6 +95,27 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
       setError("Couldn't parse that file — paste the text instead.");
     } finally {
       setParsingResume(false);
+    }
+  };
+
+  const handleJdFileUpload = async (file: File) => {
+    setParsingJdFile(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("jd", file);
+      const res = await fetch("/api/parse-jd", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Couldn't parse that file — paste the text instead.");
+      } else {
+        setJd(data.text);
+        setJdFileName(file.name);
+      }
+    } catch {
+      setError("Couldn't parse that file — paste the text instead.");
+    } finally {
+      setParsingJdFile(false);
     }
   };
 
@@ -105,6 +137,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
     setRole(SAMPLE_ROLE);
     setJd(SAMPLE_JD);
     setJdUrl("");
+    setJdFileName(null);
     setResume(SAMPLE_RESUME);
     setResumeFileName(null);
     setError(null);
@@ -170,6 +203,32 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
             {fetchingJd ? "Fetching…" : "Fetch"}
           </button>
         </div>
+        <div className="flex items-center gap-2 mb-2">
+          <button
+            onClick={() => jdFileInputRef.current?.click()}
+            disabled={parsingJdFile}
+            className="text-xs px-3 py-2 border shrink-0 cursor-pointer disabled:cursor-not-allowed"
+            style={{ borderColor: theme.rule, color: theme.paperMuted, fontFamily: sansFont, opacity: parsingJdFile ? 0.6 : 1 }}
+          >
+            {parsingJdFile ? "Parsing…" : "Upload PDF"}
+          </button>
+          {jdFileName && (
+            <span className="text-[11px]" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+              {jdFileName}
+            </span>
+          )}
+          <input
+            ref={jdFileInputRef}
+            type="file"
+            accept=".pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleJdFileUpload(file);
+              e.target.value = "";
+            }}
+          />
+        </div>
         <textarea
           value={jd}
           onChange={(e) => setJd(e.target.value)}
@@ -186,7 +245,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
         </label>
         <div className="flex items-center gap-2 mb-2">
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => resumeFileInputRef.current?.click()}
             disabled={parsingResume}
             className="text-xs px-3 py-2 border shrink-0 cursor-pointer disabled:cursor-not-allowed"
             style={{ borderColor: theme.rule, color: theme.paperMuted, fontFamily: sansFont, opacity: parsingResume ? 0.6 : 1 }}
@@ -199,13 +258,13 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
             </span>
           )}
           <input
-            ref={fileInputRef}
+            ref={resumeFileInputRef}
             type="file"
             accept=".pdf,.docx,.txt"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) handleFileUpload(file);
+              if (file) handleResumeFileUpload(file);
               e.target.value = "";
             }}
           />
