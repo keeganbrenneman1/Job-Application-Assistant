@@ -52,11 +52,26 @@ Faster, tailored interview prep grounded in the real job description, the candid
 ## Output — prep doc sections
 **Layout:** collapsible sections, not one long scroll — optimized for scanning/jumping to a specific section (e.g. logistics right before a call) rather than re-reading top to bottom.
 
+**Provenance:** each section carries a short label indicating its source, plus a persistent top-of-doc note ("A starting point, not a replacement for the original posting."). Section-level, not per-sentence — asking the model to self-tag individual claims is unreliable and risks mislabeling reasoning as sourced fact, which is worse than no label. Labels:
+- Company → "From live research — verify independently"
+- Fit → "Reasoned from your resume + this JD"
+- Expect → "Reasoned — typical for this stage"
+- Ask → "Suggested, not from the JD"
+- Logistics → "Mixed — research where available, reasoned otherwise"
+
 1. Company snapshot (size, funding, recent news, culture signal)
 2. Role/JD-to-resume fit talking points
 3. Likely screening questions + short frameworks for answering (not scripted answers)
 4. Questions to ask the recruiter
 5. Logistics prep (comp range if findable, availability, work authorization if relevant)
+
+## v2 design notes (stage-aware, multi-round prep)
+- **Cross-stage context:** each new stage's generation call receives a condensed summary of prior stages for that opportunity — not full raw text — to avoid context/cost ballooning as stages accumulate.
+- **Additional context input:** free-text field per stage generation (e.g., pasting an interview-invite email), folded into that stage's prompt alongside JD/resume/prior-stage summary.
+- **Company research caching, firm requirement:** Call 1 (research) results persist for the life of the opportunity and are reused across all its stages — not re-run per stage. Supersedes the v1 "optional, time-limited cache" note; a new company search per round of the same opportunity is redundant.
+- **Feed layout:** opportunity page shows all generated stage-preps in reverse-chronological order — newest stage expanded at top, prior stages collapsed to a header (stage name + date), click to re-expand.
+- **Stage-specific templates:** each stage type (Recruiter Screen, Technical/Case, Behavioral, Panel/Onsite, Reference Check, Other) has its own defined section set. Consistent sections within a stage type, different section sets across stage types — not fully freeform generation, to preserve testable structure/verification snapshots per stage type.
+- **Stage selection:** dropdown of common stage types plus free-text "Other," picked by the user when generating a new prep under an existing opportunity — no automatic status/progression tracking (still deferred to v-next).
 
 ## Portfolio-ready checklist (tracked from kickoff, per PORTFOLIO_PROCESS.md)
 - [ ] Verification snapshot checked against running app
