@@ -10,8 +10,8 @@ Faster, tailored interview prep grounded in the real job description, the candid
 
 ## User & data model
 - Named 2-user tool (Keegan + spouse), not a public demo.
-- No authentication — simple name/profile picker to keep each person's preps identifiable, not isolated. The picker is a labeling convenience, not a data-access boundary — underlying storage is shared, no query-level filtering by profile. Acceptable given a 2-person trusted tool; would need real filtering if this ever became multi-tenant.
-- Opportunities display as a single shared list (no separate per-person views), formatted "[Role] – [Company]." Applicant name stays in the data model for disambiguation but isn't forced into the visible label.
+- No authentication, no profile picker/toggle in the UI — a global switcher implied personalization that didn't actually exist (it never filtered anything), which was worse than having no concept of "users" at all. Applicant name, if needed, is entered as a field when creating an opportunity, not selected globally.
+- Opportunities display as a single shared list, formatted "[Role] – [Company]," sortable by any column.
 - Opportunity records should include company, role, and applicant name — applicant name lets the two users tell their own entries apart in a shared list without needing enforced separation.
 - Documented trade-off: not multi-tenant-safe, sufficient for personal use. Would require real auth to open beyond these two users.
 - Resume is NOT persisted. Pasted/uploaded fresh each session, held only in memory for that generation, discarded after. Only the generated prep doc is saved — minimizes personal data actually sitting in the database.
