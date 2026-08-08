@@ -52,6 +52,8 @@ Faster, tailored interview prep grounded in the real job description, the candid
 ## Output — prep doc sections
 **Layout:** collapsible sections, not one long scroll — optimized for scanning/jumping to a specific section (e.g. logistics right before a call) rather than re-reading top to bottom.
 
+**Tone:** candid over supportive throughout — the generation prompt should not default to encouraging or uniformly-positive language. Where a real weakness, stretch, or gap exists (fit, likely tough questions, anything else), state it plainly. The goal is an accurate read the user can act on, not motivational copy.
+
 **Provenance:** each section carries a short label indicating its source, plus a persistent top-of-doc note ("A starting point, not a replacement for the original posting."). Section-level, not per-sentence — asking the model to self-tag individual claims is unreliable and risks mislabeling reasoning as sourced fact, which is worse than no label. Labels:
 - Company → "From live research — verify independently"
 - Fit → "Reasoned from your resume + this JD"
