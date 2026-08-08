@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { generatePrep } from "@/lib/ai";
 import { addStagePrep, getOpportunity, setOpportunityResearch } from "@/lib/store";
-import { STAGE_TYPES, stageLabelFor } from "@/types";
+import { NEXT_STEP_STAGE_TYPES, stageLabelFor } from "@/types";
 import type { NextStepRequest, NextStepResponse, StageType } from "@/types";
 
 export const runtime = "nodejs";
 
-const VALID_STAGE_TYPES = STAGE_TYPES.map((s) => s.id);
+// recruiter_screen deliberately excluded — it's v1's implicit first stage,
+// created at opportunity creation and never re-selectable as a next step.
+const VALID_STAGE_TYPES = NEXT_STEP_STAGE_TYPES.map((s) => s.id);
 
 // v2's "Generate Next Step" — see spec "v2 flow" step 4. Hard capped at 2
 // total stage-preps per opportunity for v2 (only appears in the UI when
