@@ -24,7 +24,7 @@ export function Chrome({ view, setView, wide, children }: ChromeProps) {
             Interview Prep
           </span>
           <span className="text-xs" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-            recruiter screen
+            stage-by-stage prep
           </span>
         </div>
       </header>

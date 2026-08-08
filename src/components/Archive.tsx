@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Trash2 } from "lucide-react";
 import { theme, serifFont, sansFont } from "@/lib/theme";
-import { STAGE_LABEL } from "@/lib/constants";
 import type { OpportunitySummary } from "@/types";
 
 interface ArchiveProps {
@@ -13,12 +12,13 @@ interface ArchiveProps {
   onDelete: (id: string) => void;
 }
 
-type SortKey = "role" | "company" | "createdAt" | "updatedAt" | "stage";
+type SortKey = "role" | "company" | "applicant" | "createdAt" | "updatedAt" | "stage";
 type SortDir = "asc" | "desc";
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "role", label: "Role" },
   { key: "company", label: "Company" },
+  { key: "applicant", label: "Applicant" },
   { key: "createdAt", label: "Date Created" },
   { key: "updatedAt", label: "Last Updated" },
   { key: "stage", label: "Stage" },
@@ -34,21 +34,25 @@ function updatedAt(item: OpportunitySummary): string {
   return item.latestPrepAt ?? item.createdAt;
 }
 
-// Stage is a single shared constant for every row right now (see
-// src/lib/constants.ts) — sorting by it is a legitimate no-op, not an
-// unimplemented column.
+function stageDisplay(item: OpportunitySummary): string {
+  if (!item.latestStageLabel) return "—";
+  return item.stageCount > 1 ? `${item.latestStageLabel} (${item.stageCount})` : item.latestStageLabel;
+}
+
 function compareByKey(a: OpportunitySummary, b: OpportunitySummary, key: SortKey): number {
   switch (key) {
     case "role":
       return a.role.localeCompare(b.role, undefined, { sensitivity: "base" });
     case "company":
       return a.company.localeCompare(b.company, undefined, { sensitivity: "base" });
+    case "applicant":
+      return a.applicantName.localeCompare(b.applicantName, undefined, { sensitivity: "base" });
     case "createdAt":
       return a.createdAt.localeCompare(b.createdAt);
     case "updatedAt":
       return updatedAt(a).localeCompare(updatedAt(b));
     case "stage":
-      return 0;
+      return stageDisplay(a).localeCompare(stageDisplay(b), undefined, { sensitivity: "base" });
   }
 }
 
@@ -135,7 +139,7 @@ export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
                 {item.role} – {item.company}
               </div>
               <div className="text-[11px] mt-0.5 truncate" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-                {formatTimestamp(item.createdAt)} · {STAGE_LABEL}
+                {item.applicantName} · {formatTimestamp(item.createdAt)} · {stageDisplay(item)}
               </div>
             </div>
             <button
@@ -188,6 +192,9 @@ export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
                 <td className={freeTextCellClass} style={{ color: theme.paper }} title={item.company}>
                   {item.company}
                 </td>
+                <td className={freeTextCellClass} style={{ color: theme.paper }} title={item.applicantName}>
+                  {item.applicantName}
+                </td>
                 <td className={cellClass + " text-xs"} style={{ color: theme.paperMuted }}>
                   {formatTimestamp(item.createdAt)}
                 </td>
@@ -195,7 +202,7 @@ export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
                   {formatTimestamp(updatedAt(item))}
                 </td>
                 <td className={cellClass + " text-xs"} style={{ color: theme.paperMuted }}>
-                  {STAGE_LABEL}
+                  {stageDisplay(item)}
                 </td>
                 <td className="px-2.5 py-2.5">
                   <button

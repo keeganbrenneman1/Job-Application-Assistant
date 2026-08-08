@@ -2,16 +2,10 @@
 
 import { useRef, useState } from "react";
 import { theme, sansFont } from "@/lib/theme";
-import { SAMPLE_COMPANY, SAMPLE_JD, SAMPLE_RESUME, SAMPLE_ROLE } from "@/lib/sample-data";
-import { PROFILES, type Profile } from "@/types";
+import { SAMPLE_APPLICANT_NAME, SAMPLE_COMPANY, SAMPLE_JD, SAMPLE_RESUME, SAMPLE_ROLE } from "@/lib/sample-data";
+import type { GenerateRequest } from "@/types";
 
-export interface NewPrepInput {
-  owner: Profile;
-  company: string;
-  role: string;
-  jdText: string;
-  resumeText: string;
-}
+export type NewPrepInput = GenerateRequest;
 
 interface NewPrepFormProps {
   onGenerate: (input: NewPrepInput) => Promise<void>;
@@ -28,7 +22,7 @@ const labelClass = "text-xs uppercase tracking-wide block mb-1.5";
 const labelStyle = { color: theme.paperMuted, fontFamily: sansFont };
 
 export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
-  const [applicant, setApplicant] = useState<Profile>("keegan");
+  const [applicantName, setApplicantName] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [jd, setJd] = useState("");
@@ -47,6 +41,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
   const resumeFileInputRef = useRef<HTMLInputElement>(null);
 
   const canSubmit =
+    applicantName.trim() &&
     company.trim() &&
     role.trim() &&
     jd.trim() &&
@@ -133,7 +128,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
     setError(null);
     try {
       await onGenerate({
-        owner: applicant,
+        applicantName: applicantName.trim(),
         company: company.trim(),
         role: role.trim(),
         jdText: jd,
@@ -147,6 +142,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
   };
 
   const loadSample = () => {
+    setApplicantName(SAMPLE_APPLICANT_NAME);
     setCompany(SAMPLE_COMPANY);
     setRole(SAMPLE_ROLE);
     setJd(SAMPLE_JD);
@@ -173,22 +169,13 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
         <label className={labelClass} style={labelStyle}>
           Applicant
         </label>
-        <div className="flex gap-2">
-          {PROFILES.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setApplicant(p.id)}
-              className="text-xs px-3 py-2 border cursor-pointer"
-              style={{
-                borderColor: applicant === p.id ? theme.brass : theme.rule,
-                color: applicant === p.id ? theme.brass : theme.paperMuted,
-                fontFamily: sansFont,
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <input
+          value={applicantName}
+          onChange={(e) => setApplicantName(e.target.value)}
+          placeholder="Your name"
+          className="w-full px-3 py-2.5 text-sm outline-none"
+          style={inputStyle}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">

@@ -2,6 +2,7 @@
 // item in JOB APPLICATION ASSISTANT SPEC.md). Lets a fresh install show the full
 // generate → dossier flow without needing a real resume on hand.
 
+export const SAMPLE_APPLICANT_NAME = "Keegan";
 export const SAMPLE_COMPANY = "Northline";
 export const SAMPLE_ROLE = "Senior Product Manager, Platform";
 
