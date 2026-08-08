@@ -5,8 +5,8 @@ Faster, tailored interview prep grounded in the real job description, the candid
 
 ## v1 / v2 / v-next
 - **v1:** recruiter screen only. Static prep doc output. JD + resume + lightweight live company research. Name/profile picker for two known users (no login).
-- **v2:** build a ‘next step’ option in the flow that is the next option as presented to Keegan via  his job search. Use the context of the previous process step(s) when providing support for the current step in the process. repeat as many times as is necessary to build a collection of interview types to practice providing advice with less context and more
-- **v3:** extend the same static prep-doc pattern across the full interview pipeline — behavioral, technical/case, final/panel stages — so it covers the whole process end-to-end, not just one step. 
+- **v2:** build a ‘next step’ option in the flow that is the next option and follows the same static prep-doc pattern across the full interview pipeline — behavioral, technical/case, final/panel stages — so it covers the whole process end-to-end, not just one step - as presented to Keegan via  his job search. Use the context of the previous process step when providing support for the current step in the process.
+- **v3:** enable the reuse of the ‘next step’ option as many times as is necessary. Persist the interview types and sequences and show them for new and existing opportunities. Use the context of the previous process steps (plural) when providing support for the current step in the process
 - **v-next:** interactive mock Q&A, stage-by-stage tracker/dashboard. Lower priority than full-process coverage.
 
 ## User & data model
