@@ -16,7 +16,8 @@ function buildSystemPrompt(
   stageLabel: string,
   sections: StageSectionDef[],
   hasResume: boolean,
-  hasPriorStage: boolean
+  hasPriorStage: boolean,
+  interviewerTitle: string | null
 ): string {
   const shape = sections.map((s) => `  "${s.key}": "string"`).join(",\n");
   const sectionGuidance = sections.map((s) => `- "${s.key}" (${s.label}): ${s.subtext}.`).join("\n");
@@ -26,8 +27,12 @@ function buildSystemPrompt(
   const priorNote = hasPriorStage
     ? "the candidate's immediately preceding interview-stage prep"
     : "no prior-stage context (this is their first stage for this opportunity)";
+  // Referenced explicitly in the opening sentence rather than folded into
+  // the generic additional-context block — the brief calls this out
+  // specifically ("This is a Technical/Case interview with the CTO").
+  const stageDescriptor = interviewerTitle ? `"${stageLabel}" interview stage with the ${interviewerTitle}` : `"${stageLabel}" interview stage`;
 
-  return `You are helping a job candidate prepare for a "${stageLabel}" interview stage. You will be given the job description, researched company facts, and ${priorNote}${resumeNote}. Produce a prep doc with exactly these sections, nothing more:
+  return `You are helping a job candidate prepare for a ${stageDescriptor}. You will be given the job description, researched company facts, and ${priorNote}${resumeNote}. Produce a prep doc with exactly these sections, nothing more:
 
 ${sectionGuidance}
 
@@ -37,7 +42,7 @@ Rules:
 - Never produce a "company" or company-snapshot section, under any key — that's handled separately and shown once per opportunity, not per stage.
 - Ground every claim in what you were actually given (JD, research, resume if present, prior-stage content if present, additional context if present) — no invented specifics.
 - Where a section calls for likely questions or topics, give short frameworks for answering, not scripted answers or solved problems.
-- If additional context was supplied for this stage, let it visibly shape the output rather than treating it as decoration.
+${interviewerTitle ? `- The interviewer's title (${interviewerTitle}) is known — tailor content to what someone in that role is likely to probe for and care about, not a generic interviewer.\n` : ""}- If additional context was supplied for this stage, let it visibly shape the output rather than treating it as decoration.
 - If prior-stage content was supplied, stay visibly continuous with it — no contradictions if placed side by side.
 - Keep each section to 2-5 sentences, written for someone scanning right before this stage.
 
@@ -62,17 +67,35 @@ export async function generateStagePrepContent(params: {
   resumeText: string | null;
   priorStage: PriorStageContext | null;
   additionalContext: string | null;
+  interviewerTitle: string | null;
 }): Promise<StageContent> {
-  const { stageLabel, sections, company, role, jdText, research, resumeText, priorStage, additionalContext } =
-    params;
+  const {
+    stageLabel,
+    sections,
+    company,
+    role,
+    jdText,
+    research,
+    resumeText,
+    priorStage,
+    additionalContext,
+    interviewerTitle,
+  } = params;
 
   const anthropic = getAnthropic();
-  const systemPrompt = buildSystemPrompt(stageLabel, sections, Boolean(resumeText), Boolean(priorStage));
+  const systemPrompt = buildSystemPrompt(
+    stageLabel,
+    sections,
+    Boolean(resumeText),
+    Boolean(priorStage),
+    interviewerTitle
+  );
 
   const parts = [
     `Company: ${company}`,
     `Role: ${role}`,
     `Stage: ${stageLabel}`,
+    ...(interviewerTitle ? [`Interviewer: ${interviewerTitle}`] : []),
     ``,
     `--- COMPANY RESEARCH (cached from Call 1, for context only — do not repeat as a section) ---`,
     `Basic info: ${research.basicInfo}`,

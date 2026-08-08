@@ -25,6 +25,7 @@ export interface GeneratePrepParams {
   resumeText: string | null;
   priorStage: PriorStageContext | null;
   additionalContext: string | null;
+  interviewerTitle: string | null;
 }
 
 export interface GeneratePrepResult {
@@ -52,6 +53,7 @@ export async function generatePrep(params: GeneratePrepParams): Promise<Generate
     resumeText,
     priorStage,
     additionalContext,
+    interviewerTitle,
   } = params;
 
   if (isMockMode()) {
@@ -74,6 +76,7 @@ export async function generatePrep(params: GeneratePrepParams): Promise<Generate
     resumeText,
     priorStage,
     additionalContext,
+    interviewerTitle,
   });
 
   return { content, research, researchIsFresh: !existingResearch, source: "live" };

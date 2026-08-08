@@ -56,6 +56,11 @@ export function StagePrepCard({ prep, expanded, onToggle }: StagePrepCardProps) 
           <span className="text-[11px]" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
             {date}
           </span>
+          {prep.interviewerTitle && (
+            <span className="text-[11px]" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+              — {prep.interviewerTitle}
+            </span>
+          )}
           {prep.source === "mock" && (
             <span
               className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 border"

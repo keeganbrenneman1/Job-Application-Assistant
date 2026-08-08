@@ -12,7 +12,7 @@ interface ArchiveProps {
   onDelete: (id: string) => void;
 }
 
-type SortKey = "role" | "company" | "applicant" | "createdAt" | "updatedAt" | "stage";
+type SortKey = "role" | "company" | "applicant" | "createdAt" | "updatedAt" | "stage" | "interviewerTitle";
 type SortDir = "asc" | "desc";
 
 const COLUMNS: { key: SortKey; label: string }[] = [
@@ -22,6 +22,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "createdAt", label: "Date Created" },
   { key: "updatedAt", label: "Last Updated" },
   { key: "stage", label: "Stage" },
+  { key: "interviewerTitle", label: "Interviewer Title" },
 ];
 
 // Date columns read most-useful newest-first on first click; text columns
@@ -39,6 +40,10 @@ function stageDisplay(item: OpportunitySummary): string {
   return item.stageCount > 1 ? `${item.latestStageLabel} (${item.stageCount})` : item.latestStageLabel;
 }
 
+function interviewerTitleDisplay(item: OpportunitySummary): string {
+  return item.latestInterviewerTitle ?? "—";
+}
+
 function compareByKey(a: OpportunitySummary, b: OpportunitySummary, key: SortKey): number {
   switch (key) {
     case "role":
@@ -53,6 +58,8 @@ function compareByKey(a: OpportunitySummary, b: OpportunitySummary, key: SortKey
       return updatedAt(a).localeCompare(updatedAt(b));
     case "stage":
       return stageDisplay(a).localeCompare(stageDisplay(b), undefined, { sensitivity: "base" });
+    case "interviewerTitle":
+      return interviewerTitleDisplay(a).localeCompare(interviewerTitleDisplay(b), undefined, { sensitivity: "base" });
   }
 }
 
@@ -140,6 +147,7 @@ export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
               </div>
               <div className="text-[11px] mt-0.5 truncate" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
                 {item.applicantName} · {formatTimestamp(item.createdAt)} · {stageDisplay(item)}
+                {item.latestInterviewerTitle ? ` · ${item.latestInterviewerTitle}` : ""}
               </div>
             </div>
             <button
@@ -203,6 +211,9 @@ export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
                 </td>
                 <td className={cellClass + " text-xs"} style={{ color: theme.paperMuted }}>
                   {stageDisplay(item)}
+                </td>
+                <td className={cellClass + " text-xs"} style={{ color: theme.paperMuted }}>
+                  {interviewerTitleDisplay(item)}
                 </td>
                 <td className="px-2.5 py-2.5">
                   <button

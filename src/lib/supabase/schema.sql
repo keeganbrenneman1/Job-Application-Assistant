@@ -21,6 +21,9 @@
 -- - `preps` (now "stage preps") gain `stage_type` / `stage_label` /
 --   `additional_context`; their own `research` column is gone since
 --   research now lives on the opportunity.
+-- - `preps` also gain `interviewer_title` (optional, short, user-entered)
+--   and `stage_type` gains a `hiring_manager` option, both from the v2
+--   build brief supplement rather than the original spec.
 
 create extension if not exists "pgcrypto";
 
@@ -42,11 +45,12 @@ create table if not exists preps (
   id uuid primary key default gen_random_uuid(),
   opportunity_id uuid not null references opportunities (id) on delete cascade,
   stage_type text not null check (
-    stage_type in ('recruiter_screen', 'technical_case', 'behavioral', 'panel_onsite', 'reference_check', 'other')
+    stage_type in ('recruiter_screen', 'technical_case', 'behavioral', 'hiring_manager', 'panel_onsite', 'reference_check', 'other')
   ),
   stage_label text not null, -- resolved display label; carries the free-text "Other" label verbatim
   content jsonb not null, -- StageContent: dynamic section keys per stage type, see src/types/index.ts
   additional_context text, -- optional free-text context supplied for this stage's generation (e.g. an interview-invite email)
+  interviewer_title text, -- optional, short, user-entered (e.g. "CTO") — never researched, never a resume upload
   source text not null default 'live' check (source in ('live', 'mock')),
   created_at timestamptz not null default now()
 );
@@ -124,7 +128,7 @@ begin
     update preps set stage_type = 'recruiter_screen' where stage_type is null;
     alter table preps alter column stage_type set not null;
     alter table preps add constraint preps_stage_type_check check (
-      stage_type in ('recruiter_screen', 'technical_case', 'behavioral', 'panel_onsite', 'reference_check', 'other')
+      stage_type in ('recruiter_screen', 'technical_case', 'behavioral', 'hiring_manager', 'panel_onsite', 'reference_check', 'other')
     );
   end if;
 
@@ -144,10 +148,31 @@ begin
     alter table preps add column additional_context text;
   end if;
 
+  if not exists (
+    select 1 from information_schema.columns
+    where table_name = 'preps' and column_name = 'interviewer_title'
+  ) then
+    alter table preps add column interviewer_title text;
+  end if;
+
   if exists (
     select 1 from information_schema.columns
     where table_name = 'preps' and column_name = 'research'
   ) then
     alter table preps drop column research;
   end if;
+
+  -- Unconditional refresh, not just "add if missing": an earlier version
+  -- of this file's stage_type check constraint (both the fresh-create
+  -- statement above and this migration block) omitted 'hiring_manager'.
+  -- A database that already ran that version has the stale constraint in
+  -- place and would reject a hiring_manager row outright. Postgres names
+  -- an inline column check constraint '<table>_<column>_check' by
+  -- default, so this targets the same constraint the fresh-create table
+  -- statement above implicitly defines — safe to drop and redefine
+  -- either way.
+  alter table preps drop constraint if exists preps_stage_type_check;
+  alter table preps add constraint preps_stage_type_check check (
+    stage_type in ('recruiter_screen', 'technical_case', 'behavioral', 'hiring_manager', 'panel_onsite', 'reference_check', 'other')
+  );
 end $$;
