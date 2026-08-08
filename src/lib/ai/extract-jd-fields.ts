@@ -20,7 +20,7 @@ Respond with ONLY a JSON object (no markdown fences, no commentary):
   "company": "string, or null if you can't confidently identify it",
   "role": "string, or null if you can't confidently identify it"
 }
-Do not guess — return null rather than a low-confidence answer.`;
+Do not guess — return null rather than a low-confidence answer. This will be parsed by a strict JSON parser — never put a literal double-quote character inside a string value.`;
 
 export interface JdFields {
   company: string | null;

@@ -45,6 +45,7 @@ Rules:
 ${interviewerTitle ? `- The interviewer's title (${interviewerTitle}) is known — tailor content to what someone in that role is likely to probe for and care about, not a generic interviewer.\n` : ""}- If additional context was supplied for this stage, let it visibly shape the output rather than treating it as decoration.
 - If prior-stage content was supplied, stay visibly continuous with it — no contradictions if placed side by side.
 - Keep each section to 2-5 sentences, written for someone scanning right before this stage.
+- Your output will be parsed by a strict JSON parser. When quoting exact language (from the JD, a resume, or anywhere else), use single quotes (') around it, never double quotes ("), and never use a literal double-quote character inside any string value for any other reason — an unescaped one breaks the whole response.
 
 Respond with ONLY a JSON object (no markdown fences, no commentary) matching exactly this shape:
 {
