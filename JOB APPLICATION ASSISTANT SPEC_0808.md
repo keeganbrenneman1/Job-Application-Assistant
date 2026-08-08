@@ -7,7 +7,7 @@ Faster, tailored interview prep grounded in the real job description, the candid
 - **v1:** recruiter screen only. Static prep doc output. JD + resume + lightweight live company research. No login, no picker — applicant name entered as a per-opportunity field.
 - **v2:** add a single "next step" option after the Recruiter Screen prep — one additional stage, hard capped at 2 stages total per opportunity. Uses the context of the immediately preceding stage only (no accumulation across more than one hop).
 - **v3:** remove the v2 cap — reuse the "next step" option as many times as necessary. Persist interview types/sequences and surface them for new and existing opportunities. Uses context of all prior stages (plural), not just the last one.
-- **v-next:** pdf upload of the interviewer’s profile for use as context in interview prep, interactive mock Q&A, stage-by-stage tracker/dashboard (ower priority than full-process coverage).
+- **v-next:** support pdf upload, supplied by the user, and not persisted, of the interviewer’s profile for use as context in interview prep, interactive mock Q&A, stage-by-stage tracker/dashboard (lower priority than full-process coverage).
 
 ## User & data model
 - Named 2-user tool (Keegan + spouse), not a public demo.
