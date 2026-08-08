@@ -28,6 +28,7 @@ const labelStyle = { color: theme.paperMuted, fontFamily: sansFont };
 export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps) {
   const [stageType, setStageType] = useState<StageType>(NEXT_STEP_STAGE_TYPES[0].id);
   const [customLabel, setCustomLabel] = useState("");
+  const [interviewerTitle, setInterviewerTitle] = useState("");
   const [jdExpanded, setJdExpanded] = useState(false);
   const [additionalContext, setAdditionalContext] = useState("");
   const [resume, setResume] = useState("");
@@ -72,6 +73,7 @@ export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps
         stageLabel: needsCustomLabel ? customLabel.trim() : undefined,
         resumeText: resume.trim() || undefined,
         additionalContext: additionalContext.trim() || undefined,
+        interviewerTitle: interviewerTitle.trim() || undefined,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed.");
@@ -107,6 +109,23 @@ export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps
             style={inputStyle}
           />
         )}
+      </div>
+
+      <div>
+        <label className={labelClass} style={labelStyle}>
+          Interviewer title <span style={{ opacity: 0.6 }}>(optional)</span>
+        </label>
+        <p className="text-[11px] mb-1.5" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+          E.g. &quot;CTO&quot; or &quot;Senior Engineering Manager&quot; — a short title, not a resume or bio. Shapes
+          what this stage&apos;s prep focuses on.
+        </p>
+        <input
+          value={interviewerTitle}
+          onChange={(e) => setInterviewerTitle(e.target.value)}
+          placeholder="e.g. CTO"
+          className="w-full px-3 py-2.5 text-sm outline-none"
+          style={inputStyle}
+        />
       </div>
 
       <div className="border" style={{ borderColor: theme.rule }}>

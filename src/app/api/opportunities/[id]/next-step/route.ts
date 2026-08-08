@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { stageType, stageLabel, resumeText, additionalContext } = body;
+  const { stageType, stageLabel, resumeText, additionalContext, interviewerTitle } = body;
 
   if (!stageType || !VALID_STAGE_TYPES.includes(stageType as StageType)) {
     return NextResponse.json(
@@ -67,6 +67,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       resumeText: resumeText?.trim() || null,
       priorStage: { stageLabel: priorPrep.stageLabel, content: priorPrep.content },
       additionalContext: additionalContext?.trim() || null,
+      interviewerTitle: interviewerTitle?.trim() || null,
     });
 
     // Defensive only — an opportunity reaching this route should always
@@ -79,6 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       resolvedStageLabel,
       content,
       additionalContext?.trim() || null,
+      interviewerTitle?.trim() || null,
       source
     );
 

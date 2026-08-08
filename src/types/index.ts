@@ -257,6 +257,7 @@ export interface StagePrep {
   stageLabel: string; // resolved display label (custom text for "other", else the stock label)
   content: StageContent;
   additionalContext: string | null;
+  interviewerTitle: string | null; // e.g. "CTO", "Senior Engineering Manager" — short, user-entered, not researched
   source: "live" | "mock";
   createdAt: string;
 }
@@ -269,6 +270,7 @@ export interface OpportunitySummary extends Opportunity {
   latestPrepAt: string | null;
   stageCount: number;
   latestStageLabel: string | null;
+  latestInterviewerTitle: string | null;
 }
 
 export interface GenerateRequest {
@@ -289,6 +291,7 @@ export interface NextStepRequest {
   stageLabel?: string; // required (non-empty) when stageType === "other"
   resumeText?: string;
   additionalContext?: string;
+  interviewerTitle?: string; // e.g. "CTO" — referenced explicitly in the Call 2 prompt, not folded into additionalContext
 }
 
 export interface NextStepResponse {

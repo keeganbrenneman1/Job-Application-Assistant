@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       resumeText: resumeText.trim(),
       priorStage: null,
       additionalContext: null,
+      interviewerTitle: null,
     });
 
     const opportunity = await createOpportunity(
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
       jdText.trim()
     );
     await setOpportunityResearch(opportunity.id, research);
-    const prep = await addStagePrep(opportunity.id, FIRST_STAGE, stageLabel, content, null, source);
+    const prep = await addStagePrep(opportunity.id, FIRST_STAGE, stageLabel, content, null, null, source);
 
     const response: GenerateResponse = {
       opportunity: { ...opportunity, companyResearch: research },

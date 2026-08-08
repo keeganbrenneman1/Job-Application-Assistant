@@ -89,6 +89,7 @@ export async function addStagePrep(
   stageLabel: string,
   content: StageContent,
   additionalContext: string | null,
+  interviewerTitle: string | null,
   source: "live" | "mock"
 ): Promise<StagePrep> {
   const supabase = getSupabase();
@@ -101,6 +102,7 @@ export async function addStagePrep(
         stage_label: stageLabel,
         content,
         additional_context: additionalContext,
+        interviewer_title: interviewerTitle,
         source,
       })
       .select()
@@ -116,6 +118,7 @@ export async function addStagePrep(
     stageLabel,
     content,
     additionalContext,
+    interviewerTitle,
     source,
     createdAt: new Date().toISOString(),
   };
@@ -132,11 +135,15 @@ export async function listOpportunities(): Promise<OpportunitySummary[]> {
   if (supabase) {
     const { data, error } = await supabase
       .from("opportunities")
-      .select("*, preps(created_at, stage_label)")
+      .select("*, preps(created_at, stage_label, interviewer_title)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(`listOpportunities: ${error.message}`);
     return (data ?? []).map((row) => {
-      const preps = (row.preps ?? []) as { created_at: string; stage_label: string }[];
+      const preps = (row.preps ?? []) as {
+        created_at: string;
+        stage_label: string;
+        interviewer_title: string | null;
+      }[];
       const sorted = [...preps].sort((a, b) => a.created_at.localeCompare(b.created_at));
       const latest = sorted.at(-1);
       return {
@@ -144,6 +151,7 @@ export async function listOpportunities(): Promise<OpportunitySummary[]> {
         latestPrepAt: latest?.created_at ?? null,
         stageCount: preps.length,
         latestStageLabel: latest?.stage_label ?? null,
+        latestInterviewerTitle: latest?.interviewer_title ?? null,
       };
     });
   }
@@ -158,6 +166,7 @@ export async function listOpportunities(): Promise<OpportunitySummary[]> {
       latestPrepAt: latest?.createdAt ?? null,
       stageCount: preps.length,
       latestStageLabel: latest?.stageLabel ?? null,
+      latestInterviewerTitle: latest?.interviewerTitle ?? null,
     };
   });
 }
@@ -234,6 +243,7 @@ function rowToPrep(row: any): StagePrep {
     stageLabel: row.stage_label,
     content: row.content,
     additionalContext: row.additional_context ?? null,
+    interviewerTitle: row.interviewer_title ?? null,
     source: row.source,
     createdAt: row.created_at,
   };
