@@ -3,9 +3,8 @@ import { deleteOpportunity, getOpportunity } from "@/lib/store";
 
 export const runtime = "nodejs";
 
-// Shared across both profiles — anyone can open or delete any
-// opportunity. See JOB APPLICATION ASSISTANT SPEC.md "User & data model" and
-// src/lib/store.ts.
+// Shared across both users — anyone can open or delete any
+// opportunity. See spec "User & data model" and src/lib/store.ts.
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 

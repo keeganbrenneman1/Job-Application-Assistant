@@ -5,12 +5,12 @@ import type {
   Opportunity,
   OpportunitySummary,
   OpportunityWithPreps,
-  Prep,
-  PrepContent,
-  Profile,
+  StageContent,
+  StagePrep,
+  StageType,
 } from "@/types";
 
-// Persistence for opportunities + preps. Backed by Supabase when
+// Persistence for opportunities + stage preps. Backed by Supabase when
 // SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are configured (see
 // src/lib/supabase/schema.sql). Falls back to an in-memory store when they
 // aren't, so `npm run dev` is usable end-to-end in a fresh Codespace before
@@ -19,7 +19,7 @@ import type {
 
 interface MemoryDB {
   opportunities: Opportunity[];
-  preps: Prep[];
+  preps: StagePrep[];
 }
 
 const globalForMemory = globalThis as unknown as { __jaaMemoryDB?: MemoryDB };
@@ -32,15 +32,16 @@ function memoryDB(): MemoryDB {
 }
 
 export async function createOpportunity(
-  owner: Profile,
+  applicantName: string,
   company: string,
-  role: string
+  role: string,
+  jdText: string
 ): Promise<Opportunity> {
   const supabase = getSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("opportunities")
-      .insert({ owner, company, role })
+      .insert({ applicant_name: applicantName, company, role, jd_text: jdText })
       .select()
       .single();
     if (error) throw new Error(`createOpportunity: ${error.message}`);
@@ -49,37 +50,72 @@ export async function createOpportunity(
 
   const opportunity: Opportunity = {
     id: randomUUID(),
-    owner,
+    applicantName,
     company,
     role,
+    jdText,
+    companyResearch: null,
     createdAt: new Date().toISOString(),
   };
   memoryDB().opportunities.unshift(opportunity);
   return opportunity;
 }
 
-export async function addPrep(
+// Call 1's research result, persisted once and reused for every later
+// stage on this opportunity (firm requirement — see spec "Grounding &
+// architecture"). Only ever called when an opportunity has no cached
+// research yet.
+export async function setOpportunityResearch(
   opportunityId: string,
-  content: PrepContent,
-  research: CompanyResearch | null,
+  research: CompanyResearch
+): Promise<void> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ company_research: research })
+      .eq("id", opportunityId);
+    if (error) throw new Error(`setOpportunityResearch: ${error.message}`);
+    return;
+  }
+
+  const opportunity = memoryDB().opportunities.find((o) => o.id === opportunityId);
+  if (opportunity) opportunity.companyResearch = research;
+}
+
+export async function addStagePrep(
+  opportunityId: string,
+  stageType: StageType,
+  stageLabel: string,
+  content: StageContent,
+  additionalContext: string | null,
   source: "live" | "mock"
-): Promise<Prep> {
+): Promise<StagePrep> {
   const supabase = getSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("preps")
-      .insert({ opportunity_id: opportunityId, content, research, source })
+      .insert({
+        opportunity_id: opportunityId,
+        stage_type: stageType,
+        stage_label: stageLabel,
+        content,
+        additional_context: additionalContext,
+        source,
+      })
       .select()
       .single();
-    if (error) throw new Error(`addPrep: ${error.message}`);
+    if (error) throw new Error(`addStagePrep: ${error.message}`);
     return rowToPrep(data);
   }
 
-  const prep: Prep = {
+  const prep: StagePrep = {
     id: randomUUID(),
     opportunityId,
+    stageType,
+    stageLabel,
     content,
-    research,
+    additionalContext,
     source,
     createdAt: new Date().toISOString(),
   };
@@ -87,37 +123,43 @@ export async function addPrep(
   return prep;
 }
 
-// Shared across both profiles by design (see JOB APPLICATION ASSISTANT SPEC.md: a
-// named 2-person tool, not multi-tenant). `owner` stays on the record to
-// track who generated each prep, but it's not a filter — both people see
-// the same opportunity list.
+// Shared across both users by design (see spec: a named 2-person tool, not
+// multi-tenant). `applicant_name` stays on the record so the two users can
+// tell their entries apart in the list, but it's not a filter — both
+// people see the same opportunity list.
 export async function listOpportunities(): Promise<OpportunitySummary[]> {
   const supabase = getSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("opportunities")
-      .select("*, preps(created_at)")
+      .select("*, preps(created_at, stage_label)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(`listOpportunities: ${error.message}`);
     return (data ?? []).map((row) => {
-      const preps = (row.preps ?? []) as { created_at: string }[];
-      const latest = preps
-        .map((p) => p.created_at)
-        .sort()
-        .at(-1);
-      return { ...rowToOpportunity(row), latestPrepAt: latest ?? null };
+      const preps = (row.preps ?? []) as { created_at: string; stage_label: string }[];
+      const sorted = [...preps].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const latest = sorted.at(-1);
+      return {
+        ...rowToOpportunity(row),
+        latestPrepAt: latest?.created_at ?? null,
+        stageCount: preps.length,
+        latestStageLabel: latest?.stage_label ?? null,
+      };
     });
   }
 
-  return memoryDB()
-    .opportunities.map((o) => {
-      const latest = memoryDB()
-        .preps.filter((p) => p.opportunityId === o.id)
-        .map((p) => p.createdAt)
-        .sort()
-        .at(-1);
-      return { ...o, latestPrepAt: latest ?? null };
-    });
+  return memoryDB().opportunities.map((o) => {
+    const preps = memoryDB()
+      .preps.filter((p) => p.opportunityId === o.id)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const latest = preps.at(-1);
+    return {
+      ...o,
+      latestPrepAt: latest?.createdAt ?? null,
+      stageCount: preps.length,
+      latestStageLabel: latest?.stageLabel ?? null,
+    };
+  });
 }
 
 // Deletes the opportunity and its preps. Supabase cascades via the FK
@@ -174,20 +216,24 @@ export async function getOpportunity(id: string): Promise<OpportunityWithPreps |
 function rowToOpportunity(row: any): Opportunity {
   return {
     id: row.id,
-    owner: row.owner,
+    applicantName: row.applicant_name,
     company: row.company,
     role: row.role,
+    jdText: row.jd_text,
+    companyResearch: row.company_research ?? null,
     createdAt: row.created_at,
   };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rowToPrep(row: any): Prep {
+function rowToPrep(row: any): StagePrep {
   return {
     id: row.id,
     opportunityId: row.opportunity_id,
+    stageType: row.stage_type,
+    stageLabel: row.stage_label,
     content: row.content,
-    research: row.research ?? null,
+    additionalContext: row.additional_context ?? null,
     source: row.source,
     createdAt: row.created_at,
   };

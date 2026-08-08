@@ -3,8 +3,8 @@ import { listOpportunities } from "@/lib/store";
 
 export const runtime = "nodejs";
 
-// Shared across both profiles — see JOB APPLICATION ASSISTANT SPEC.md "User & data
-// model" and src/lib/store.ts. No owner filter here.
+// Shared across both users — see spec "User & data model" and
+// src/lib/store.ts. No applicant filter here.
 export async function GET() {
   try {
     const opportunities = await listOpportunities();

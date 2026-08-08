@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { generatePrep } from "@/lib/ai";
-import { addPrep, createOpportunity } from "@/lib/store";
-import type { GenerateRequest, GenerateResponse, Profile } from "@/types";
+import { addStagePrep, createOpportunity, setOpportunityResearch } from "@/lib/store";
+import { stageLabelFor } from "@/types";
+import type { GenerateRequest, GenerateResponse } from "@/types";
 
 export const runtime = "nodejs";
 
-const VALID_PROFILES: Profile[] = ["keegan", "spouse"];
+// Always the first stage for a new opportunity — subsequent stages go
+// through /api/opportunities/[id]/next-step instead, which reuses the JD
+// and cached research this route persists here.
+const FIRST_STAGE = "recruiter_screen" as const;
 
 export async function POST(request: Request) {
   let body: Partial<GenerateRequest>;
@@ -15,10 +19,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { owner, company, role, jdText, resumeText } = body;
+  const { applicantName, company, role, jdText, resumeText } = body;
 
-  if (!owner || !VALID_PROFILES.includes(owner)) {
-    return NextResponse.json({ error: "owner must be 'keegan' or 'spouse'." }, { status: 400 });
+  if (!applicantName?.trim()) {
+    return NextResponse.json({ error: "applicantName is required." }, { status: 400 });
   }
   if (!company?.trim() || !role?.trim()) {
     return NextResponse.json({ error: "company and role are required." }, { status: 400 });
@@ -28,17 +32,32 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { content, research, source } = await generatePrep(
-      resumeText,
-      jdText,
+    const stageLabel = stageLabelFor(FIRST_STAGE);
+    const { content, research, source } = await generatePrep({
+      stageType: FIRST_STAGE,
+      stageLabel,
+      company: company.trim(),
+      role: role.trim(),
+      jdText: jdText.trim(),
+      existingResearch: null,
+      resumeText: resumeText.trim(),
+      priorStage: null,
+      additionalContext: null,
+    });
+
+    const opportunity = await createOpportunity(
+      applicantName.trim(),
       company.trim(),
-      role.trim()
+      role.trim(),
+      jdText.trim()
     );
+    await setOpportunityResearch(opportunity.id, research);
+    const prep = await addStagePrep(opportunity.id, FIRST_STAGE, stageLabel, content, null, source);
 
-    const opportunity = await createOpportunity(owner, company.trim(), role.trim());
-    const prep = await addPrep(opportunity.id, content, research, source);
-
-    const response: GenerateResponse = { opportunity, prep };
+    const response: GenerateResponse = {
+      opportunity: { ...opportunity, companyResearch: research },
+      prep,
+    };
     return NextResponse.json(response, { status: 201 });
   } catch (err) {
     console.error("generate failed", err);
@@ -46,5 +65,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
   // Note: resumeText above only ever lives in this request's memory and the
-  // two AI calls it feeds — it is never passed to store.ts / persisted.
+  // generation call it feeds — it is never passed to store.ts / persisted.
 }

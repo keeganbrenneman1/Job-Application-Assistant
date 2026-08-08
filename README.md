@@ -1,28 +1,37 @@
 # Job Application Assistant
 ## Why
 Faster, tailored interview prep grounded in the real job description, the candidate’s resume,
-and current company information — starting with the recruiter screen stage. Built for
+and current company information, across the whole interview pipeline. Built for
 personal use (Keegan + spouse) during an active job search, and as a portfolio piece
 demonstrating a hybrid grounded-generation architecture (deterministic extraction + live
 search-grounded research + separate reasoning call).
-## What it does (v1)
-Paste or upload a resume and a job description (text or URL).
-Generates a recruiter-screen prep doc: company snapshot, fit talking points, likely
-questions, questions to ask, logistics.
-Collapsible dossier-style layout, built for quick scanning right before a call.
-Lightweight opportunity archive — revisit past preps by company/role, no login (2-
-person profile picker).
-Resume is never persisted; only the generated prep doc is saved.
+## What it does (v2)
+Paste or upload a resume and a job description (text or URL) to generate a Recruiter
+Screen prep doc: company snapshot, fit talking points, likely questions, questions to
+ask, logistics. From there, generate one additional stage-specific prep (Technical/Case,
+Behavioral, Panel/Onsite, Reference Check, or Other) that builds on the Recruiter Screen
+prep's content — hard capped at 2 stages per opportunity for v2. The Company Snapshot is
+generated once per opportunity (cached, not re-researched per stage) and shown as a
+collapsible block above a reverse-chronological feed of stage preps. Each stage's form
+lets you optionally add stage-specific context (e.g. an interview-invite email) and
+optionally re-supply your resume — omitting it still generates a valid prep from the JD,
+cached company research, and the prior stage's content.
+Lightweight opportunity archive — revisit past preps by company/role, sortable by any
+column, no login. Applicant name is a per-opportunity free-text field, not a global
+profile picker.
+Resume is never persisted, at any stage; only the generated prep docs (and the JD, once)
+are saved.
 ## Status
-Scaffolded. Next.js (App Router, TypeScript, Tailwind) app implementing the full v1
-architecture from `JOB APPLICATION ASSISTANT SPEC.md`: deterministic resume/JD extraction, a
-two-call Claude pipeline (grounded research, then reasoning-only generation) behind a
-single swappable mock/live function, and Supabase-backed opportunity/prep storage with
-an in-memory fallback for local dev before a Supabase project is wired up. Not yet
-deployed or run against a live Claude API key.
+Next.js (App Router, TypeScript, Tailwind) app implementing the v2 architecture from
+`JOB APPLICATION ASSISTANT SPEC_0808.md`: deterministic resume/JD extraction, a
+Claude pipeline (grounded research once per opportunity, then stage-aware reasoning-only
+generation per stage) behind a single swappable mock/live function, and Supabase-backed
+opportunity/stage-prep storage with an in-memory fallback for local dev before a
+Supabase project is wired up. Not yet deployed or run against a live Claude API key.
 
 ## What's not built yet
-- Additional interview stages beyond recruiter screen (v2)
+- Removing the 2-stage cap and adding a rolling cross-stage summary (v3)
+- Persisted, reusable interview-stage sequences (v3)
 - Interactive mock Q&A, stage tracker (v-next)
 
 ## Stack
@@ -44,6 +53,7 @@ to enable real persistence. Use the "Load sample JD + resume" link on the New Pr
 for a cold-start demo without a real resume on hand.
 
 ## Process
-Built using a spec-first, prototype-before-code process — see `JOB APPLICATION ASSISTANT SPEC.md`
-for the locked architecture decisions and `.claude /agents/` for the review checklists
-(spec-critic, eng-architecture-reviewer, qa-smoke-test) used during build.
+Built using a spec-first, prototype-before-code process — see `JOB APPLICATION ASSISTANT SPEC_0808.md`
+(v2) and `JOB APPLICATION ASSISTANT SPEC.md` (v1) for the locked architecture decisions,
+and `.claude /agents/` for the review checklists (spec-critic, eng-architecture-reviewer,
+qa-smoke-test) used during build.
