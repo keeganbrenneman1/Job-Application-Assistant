@@ -25,7 +25,15 @@ export async function researchCompany(company: string, role: string): Promise<Co
     // Generous headroom: this call can loop through several searches plus
     // narration before its final JSON message, and a truncated response
     // (stop_reason "max_tokens") looks identical to a malformed one.
-    max_tokens: 4096,
+    max_tokens: 8000,
+    // claude-sonnet-5 defaults to adaptive thinking, which silently spends
+    // part of max_tokens on `thinking` blocks before the model ever writes
+    // its answer — with a tool-use call like this one (multiple search
+    // rounds), that budget can run out entirely before a final text block
+    // is produced, and getFinalText() then has nothing to parse. This is a
+    // structured-JSON-only call with no need for visible reasoning, so
+    // thinking is turned off rather than raced against the token budget.
+    thinking: { type: "disabled" },
     system: SYSTEM_PROMPT,
     tools: [
       {
@@ -42,7 +50,7 @@ export async function researchCompany(company: string, role: string): Promise<Co
     ],
   });
 
-  const text = getFinalText(message.content);
+  const text = getFinalText(message.content, message.stop_reason);
   const parsed = parseJsonResponse<Partial<CompanyResearch>>(text, "Research call", message.stop_reason);
 
   return {

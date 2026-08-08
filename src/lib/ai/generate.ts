@@ -101,12 +101,17 @@ export async function generateStagePrepContent(params: {
 
   const message = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 2000,
+    max_tokens: 3000,
+    // See src/lib/ai/research.ts for why this is explicit: claude-sonnet-5
+    // defaults to adaptive thinking, which can consume the whole
+    // max_tokens budget on `thinking` blocks before ever producing the
+    // final JSON text block this call needs.
+    thinking: { type: "disabled" },
     system: systemPrompt,
     messages: [{ role: "user", content: parts.join("\n") }],
   });
 
-  const text = getFinalText(message.content);
+  const text = getFinalText(message.content, message.stop_reason);
   const parsed = parseJsonResponse<Record<string, string>>(text, "Generation call", message.stop_reason);
 
   const content: StageContent = {};
