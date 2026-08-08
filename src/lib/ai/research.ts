@@ -15,7 +15,9 @@ It's fine to search multiple times and think out loud between searches. But your
   "recentNews": "string — recent news, product launches, notable events (last ~6-12 months)",
   "culture": "string — culture/values signals from careers page, interviews, employee reviews",
   "sources": ["array of URLs used"]
-}`;
+}
+
+This JSON will be parsed by a strict parser. When quoting exact language you found (e.g. a mission statement, a review snippet), use single quotes (') around it, never double quotes ("), and never use a literal double-quote character inside any string value for any other reason — an unescaped one breaks the whole response.`;
 
 export async function researchCompany(company: string, role: string): Promise<CompanyResearch> {
   const anthropic = getAnthropic();
