@@ -39,11 +39,16 @@ export async function extractJdFields(jdText: string): Promise<JdFields> {
     const message = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 200,
+      // See src/lib/ai/research.ts for why this is explicit: claude-sonnet-5
+      // defaults to adaptive thinking, which could consume this call's
+      // already-tight 200-token budget before it ever writes the JSON
+      // answer.
+      thinking: { type: "disabled" },
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: jdText.slice(0, 6000) }],
     });
 
-    const text = getFinalText(message.content);
+    const text = getFinalText(message.content, message.stop_reason);
     const parsed = parseJsonResponse<Partial<JdFields>>(text, "JD field extraction", message.stop_reason);
     return {
       company: typeof parsed.company === "string" ? parsed.company : null,

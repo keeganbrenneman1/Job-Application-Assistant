@@ -13,14 +13,21 @@ type ContentBlock = Anthropic.Messages.ContentBlock;
 // the first "text" block silently grabs that narration instead and fails
 // to parse as JSON. Calls with no tools normally only ever produce one
 // text block, so .at(-1) is a no-op safety net for them.
-export function getFinalText(content: ContentBlock[]): string {
+export function getFinalText(content: ContentBlock[], stopReason?: string | null): string {
   const textBlocks = content.filter(
     (block): block is Anthropic.Messages.TextBlock => block.type === "text"
   );
   const last = textBlocks.at(-1);
   if (!last) {
     const blockTypes = content.map((b) => b.type).join(", ") || "(empty)";
-    throw new Error(`Claude's response had no text block (content block types: ${blockTypes}).`);
+    // stop_reason "max_tokens" here means the response was cut off before
+    // Claude ever reached a text block — e.g. thinking + tool-use rounds
+    // consumed the whole budget. See src/lib/ai/research.ts for the fix
+    // (thinking disabled, more headroom) — this message exists so a
+    // recurrence points straight at the cause instead of just "no text".
+    throw new Error(
+      `Claude's response had no text block (content block types: ${blockTypes}; stop_reason: ${stopReason ?? "unknown"}).`
+    );
   }
   return last.text;
 }
