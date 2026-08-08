@@ -46,6 +46,16 @@ const MOCK_STAGE_CONTENT: Record<StageType, StageContent> = {
     logistics:
       "Behavioral rounds for platform roles here typically run with the hiring manager solo, ~45 minutes. Have 3-4 stories ready, not just the strongest one — interviewers often ask for a second example on the spot.",
   },
+  hiring_manager: {
+    fit:
+      "The hiring manager's stated need — someone who owns the platform roadmap directly rather than routing everything through engineering — maps to your Meridian Health event-pipeline ownership more specifically than it maps to the JD in general. Genuine gap: this team is described as 3-4 engineers with no dedicated data function, so be ready to speak to doing your own SQL/analysis day-to-day, not delegating it.",
+    questions:
+      "Likely: 'Walk me through how you'd spend your first 30 days on this team.' Frame around auditing the existing platform reliability gaps, not a generic 100-day plan. Likely: 'What's your working style when engineering pushes back on scope?' Have a specific instance ready, not an abstract philosophy.",
+    ask:
+      "How does the team currently decide what platform work gets prioritized over feature requests? What does this manager consider the single biggest risk to the platform roadmap right now? How does this manager prefer to be looped in — daily standups, async, weekly 1:1s?",
+    logistics:
+      "Hiring-manager rounds at this stage typically run 45 minutes, one-on-one. Confirm whether this is before or after the panel round in their process — it changes how much detail to go into on team dynamics.",
+  },
   panel_onsite: {
     synthesis:
       "Across the recruiter screen and this panel, your consistent thread is hands-on ownership of messy data under real infra constraints — keep leading with that rather than re-introducing yourself generically to each panelist. The one gap flagged earlier (5+ years PM experience vs. your ~4) will likely resurface with at least one panelist; don't let the panel be the first time you address it head-on.",

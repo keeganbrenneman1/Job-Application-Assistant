@@ -7,18 +7,31 @@ export type StageType =
   | "recruiter_screen"
   | "technical_case"
   | "behavioral"
+  | "hiring_manager"
   | "panel_onsite"
   | "reference_check"
   | "other";
 
+// Full canonical list, including recruiter_screen — used for label lookups
+// (stageLabelFor, stage display in the archive/feed) since a stage-1 prep
+// is always recruiter_screen. NOT the list to offer as choices when
+// generating a stage 2+: recruiter_screen is v1's implicit first stage,
+// created at opportunity creation and never re-selected — it should never
+// appear as a "Generate Next Step" option (see build brief). Use
+// NEXT_STEP_STAGE_TYPES for that.
 export const STAGE_TYPES: { id: StageType; label: string }[] = [
   { id: "recruiter_screen", label: "Recruiter Screen" },
   { id: "technical_case", label: "Technical / Case" },
   { id: "behavioral", label: "Behavioral" },
+  { id: "hiring_manager", label: "Hiring Manager" },
   { id: "panel_onsite", label: "Panel / Onsite" },
   { id: "reference_check", label: "Reference Check" },
   { id: "other", label: "Other" },
 ];
+
+// The 6 selectable options for "Generate Next Step" — STAGE_TYPES minus
+// recruiter_screen, in the order the build brief specifies.
+export const NEXT_STEP_STAGE_TYPES = STAGE_TYPES.filter((s) => s.id !== "recruiter_screen");
 
 export function stageLabelFor(stageType: StageType, customLabel?: string | null): string {
   if (stageType === "other" && customLabel?.trim()) return customLabel.trim();
@@ -106,6 +119,32 @@ export const STAGE_SECTIONS: Record<StageType, StageSectionDef[]> = {
       key: "ask",
       label: "Ask",
       subtext: "good questions to ask them",
+      provenance: "Suggested, not from the JD",
+    },
+    {
+      key: "logistics",
+      label: "Logistics",
+      subtext: "comp, availability, and practical details to confirm",
+      provenance: "Mixed — research where available, reasoned otherwise",
+    },
+  ],
+  hiring_manager: [
+    {
+      key: "fit",
+      label: "Manager & Team Fit",
+      subtext: "fit with this manager's stated priorities for the role and team, not generic JD fit",
+      provenance: "Reasoned from your resume + this JD",
+    },
+    {
+      key: "questions",
+      label: "Likely Questions",
+      subtext: "day-to-day scenarios, working style, and what they're solving for — frameworks, not scripts",
+      provenance: "Reasoned — typical for this stage",
+    },
+    {
+      key: "ask",
+      label: "Ask",
+      subtext: "about team dynamics, success metrics, and management style",
       provenance: "Suggested, not from the JD",
     },
     {

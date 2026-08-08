@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { theme, sansFont } from "@/lib/theme";
-import { STAGE_TYPES } from "@/types";
+import { NEXT_STEP_STAGE_TYPES } from "@/types";
 import type { NextStepRequest, StageType } from "@/types";
 
 export interface NextStepFormProps {
@@ -25,8 +26,9 @@ const labelStyle = { color: theme.paperMuted, fontFamily: sansFont };
 // optional additional-context free text, optional resume, JD reused
 // read-only from the opportunity — no re-entry required.
 export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps) {
-  const [stageType, setStageType] = useState<StageType>("technical_case");
+  const [stageType, setStageType] = useState<StageType>(NEXT_STEP_STAGE_TYPES[0].id);
   const [customLabel, setCustomLabel] = useState("");
+  const [jdExpanded, setJdExpanded] = useState(false);
   const [additionalContext, setAdditionalContext] = useState("");
   const [resume, setResume] = useState("");
   const [resumeFileName, setResumeFileName] = useState<string | null>(null);
@@ -90,7 +92,7 @@ export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps
           className="w-full px-3 py-2.5 text-sm outline-none"
           style={inputStyle}
         >
-          {STAGE_TYPES.map((s) => (
+          {NEXT_STEP_STAGE_TYPES.map((s) => (
             <option key={s.id} value={s.id}>
               {s.label}
             </option>
@@ -107,20 +109,36 @@ export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps
         )}
       </div>
 
-      <div>
-        <label className={labelClass} style={labelStyle}>
-          Job description
-        </label>
-        <p className="text-[11px] mb-1.5" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-          Reused automatically from this opportunity.
-        </p>
-        <textarea
-          value={jdText}
-          readOnly
-          rows={4}
-          className="w-full px-3 py-2.5 text-sm outline-none resize-none"
-          style={{ ...inputStyle, opacity: 0.7 }}
-        />
+      <div className="border" style={{ borderColor: theme.rule }}>
+        <button
+          type="button"
+          onClick={() => setJdExpanded((e) => !e)}
+          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left cursor-pointer"
+        >
+          <div>
+            <div className="text-xs uppercase tracking-wide" style={labelStyle}>
+              Job description
+            </div>
+            <p className="text-[11px] mt-1" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+              Reused automatically from this opportunity.
+            </p>
+          </div>
+          <ChevronDown
+            size={15}
+            color={theme.paperMuted}
+            className="shrink-0"
+            style={{ transform: jdExpanded ? "rotate(180deg)" : "none", transition: "transform 120ms" }}
+          />
+        </button>
+        {jdExpanded && (
+          <textarea
+            value={jdText}
+            readOnly
+            rows={6}
+            className="w-full px-3 py-2.5 text-sm outline-none resize-none border-t"
+            style={{ ...inputStyle, opacity: 0.7, borderColor: theme.rule }}
+          />
+        )}
       </div>
 
       <div>
@@ -142,10 +160,12 @@ export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps
 
       <div>
         <label className={labelClass} style={labelStyle}>
-          Resume <span style={{ opacity: 0.6 }}>(optional)</span>
+          Resume <span style={{ opacity: 0.6 }}>(recommended)</span>
         </label>
         <p className="text-[11px] mb-2" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-          Not required — omitting it still uses prior-stage content + JD + company research. Not stored either way.
+          Not required — omitting it still uses prior-stage content + JD + company research. Recommended for stages
+          like this one, though: they often benefit from resume specifics the Recruiter Screen prep wasn&apos;t
+          written to surface. Not stored either way.
         </p>
         <div className="flex items-center gap-2 mb-2">
           <button
