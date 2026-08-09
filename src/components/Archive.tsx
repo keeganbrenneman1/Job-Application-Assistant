@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarPlus, Trash2 } from "lucide-react";
 import { theme, serifFont, sansFont } from "@/lib/theme";
 import type { OpportunitySummary } from "@/types";
 
@@ -10,6 +10,7 @@ interface ArchiveProps {
   loading: boolean;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
+  onLogApplied: () => void;
 }
 
 type SortKey = "role" | "company" | "applicant" | "createdAt" | "updatedAt" | "stage" | "interviewerTitle";
@@ -81,7 +82,10 @@ const cellClass = "px-2.5 py-2.5 text-sm whitespace-nowrap";
 // short, so it's left to size to its own content.
 const freeTextCellClass = cellClass + " max-w-[16rem] truncate";
 
-export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
+const logAppliedButtonClass =
+  "text-xs px-3 py-2 border shrink-0 cursor-pointer flex items-center gap-1.5";
+
+export function Archive({ items, loading, onOpen, onDelete, onLogApplied }: ArchiveProps) {
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -94,19 +98,38 @@ export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
     return copy;
   }, [items, sortKey, sortDir]);
 
+  const logAppliedButton = (
+    <div className="flex justify-end mb-3">
+      <button
+        onClick={onLogApplied}
+        className={logAppliedButtonClass}
+        style={{ borderColor: theme.rule, color: theme.paperMuted, fontFamily: sansFont }}
+      >
+        <CalendarPlus size={13} />
+        Log Applied
+      </button>
+    </div>
+  );
+
   if (loading) {
     return (
-      <p className="text-sm" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-        Loading…
-      </p>
+      <>
+        {logAppliedButton}
+        <p className="text-sm" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+          Loading…
+        </p>
+      </>
     );
   }
 
   if (items.length === 0) {
     return (
-      <p className="text-sm" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-        No opportunities yet. Generate a prep doc and it&apos;ll show up here.
-      </p>
+      <>
+        {logAppliedButton}
+        <p className="text-sm" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+          No opportunities yet. Generate a prep doc and it&apos;ll show up here.
+        </p>
+      </>
     );
   }
 
@@ -128,6 +151,8 @@ export function Archive({ items, loading, onOpen, onDelete }: ArchiveProps) {
 
   return (
     <>
+      {logAppliedButton}
+
       {/* Below `sm`, a 5-column table plus a delete icon doesn't have room
           to breathe even with compact formatting — headers collide instead
           of just feeling tight. Swap to a card list there instead of
