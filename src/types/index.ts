@@ -247,6 +247,7 @@ export interface Opportunity {
   role: string;
   jdText: string;
   companyResearch: CompanyResearch | null;
+  appliedDate: string | null; // "YYYY-MM-DD"; null until set — quick-added opportunities and pre-this-field ones start null
   createdAt: string;
 }
 
@@ -279,6 +280,7 @@ export interface GenerateRequest {
   role: string;
   jdText: string;
   resumeText: string;
+  appliedDate?: string; // "YYYY-MM-DD"; the New Opportunity form defaults this to today, editable
 }
 
 export interface GenerateResponse {
@@ -298,3 +300,30 @@ export interface NextStepResponse {
   opportunity: Opportunity;
   prep: StagePrep;
 }
+
+// "Log Applied" quick-add (second opportunity-creation entry point,
+// alongside GenerateRequest/POST /api/generate): creates the opportunity
+// record only — no JD, no resume, no Call 0/1/2, no prep doc. The user
+// opens it later to add a JD/resume and generate the Recruiter Screen
+// prep once a screen is actually scheduled (see FirstPrepRequest).
+export interface LogAppliedRequest {
+  applicantName: string;
+  company: string;
+  role: string;
+  appliedDate?: string; // "YYYY-MM-DD"; defaults to today client-side, editable
+}
+
+export interface LogAppliedResponse {
+  opportunity: Opportunity;
+}
+
+// Completes a quick-added opportunity (0 stage-preps so far): supplies the
+// JD + resume that Path A collects upfront, and generates the Recruiter
+// Screen prep for it. Not for opportunities that already have a prep —
+// that's NextStepRequest's job.
+export interface FirstPrepRequest {
+  jdText: string;
+  resumeText: string;
+}
+
+export type FirstPrepResponse = GenerateResponse; // same {opportunity, prep} shape

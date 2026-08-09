@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { applicantName, company, role, jdText, resumeText } = body;
+  const { applicantName, company, role, jdText, resumeText, appliedDate } = body;
 
   if (!applicantName?.trim()) {
     return NextResponse.json({ error: "applicantName is required." }, { status: 400 });
@@ -50,7 +50,8 @@ export async function POST(request: Request) {
       applicantName.trim(),
       company.trim(),
       role.trim(),
-      jdText.trim()
+      jdText.trim(),
+      appliedDate?.trim() || null
     );
     await setOpportunityResearch(opportunity.id, research);
     const prep = await addStagePrep(opportunity.id, FIRST_STAGE, stageLabel, content, null, null, source);

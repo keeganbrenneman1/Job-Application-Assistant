@@ -4,20 +4,27 @@
 // independently (see spec "Grounding & architecture").
 
 import { getAnthropic, MODEL } from "@/lib/ai/client";
-import { getFinalText, parseJsonResponse } from "@/lib/ai/json-response";
+import { getFinalText } from "@/lib/ai/response-text";
+import { requireMarkdownSections } from "@/lib/ai/markdown-response";
 import type { CompanyResearch } from "@/types";
 
-const SYSTEM_PROMPT = `You are a research assistant gathering current, checkable facts about a company for a job candidate's interview prep. Use the web search tool to find recent, real information. Do not invent facts — if something can't be found, say so plainly in that field rather than guessing.
+const SYSTEM_PROMPT = `You are a research assistant gathering current, checkable facts about a company for a job candidate's interview prep. Use the web search tool to find recent, real information. Do not invent facts — if something can't be found, say so plainly in that section rather than guessing.
 
-It's fine to search multiple times and think out loud between searches. But your LAST message must contain ONLY a single JSON object — no preamble, no markdown code fences, no commentary before or after it — matching exactly this shape:
-{
-  "basicInfo": "string — size, industry, funding stage/amount, HQ",
-  "recentNews": "string — recent news, product launches, notable events (last ~6-12 months)",
-  "culture": "string — culture/values signals from careers page, interviews, employee reviews",
-  "sources": ["array of URLs used"]
-}
+It's fine to search multiple times and think out loud between searches. But your LAST message must contain ONLY markdown using exactly these four "## " headers, in this exact order, and nothing else before, between, or after their content — no JSON, no code fences, no preamble or closing remarks:
 
-This JSON will be parsed by a strict parser. When quoting exact language you found (e.g. a mission statement, a review snippet), use single quotes (') around it, never double quotes ("), and never use a literal double-quote character inside any string value for any other reason — an unescaped one breaks the whole response.`;
+## Basic Info
+Plain prose: size, industry, funding stage/amount, HQ.
+
+## Recent News
+Plain prose: recent news, product launches, notable events (last ~6-12 months).
+
+## Culture
+Plain prose: culture/values signals from careers page, interviews, employee reviews.
+
+## Sources
+A markdown bullet list of the URLs you used, one per line, each starting with "- ". Nothing else in this section.
+
+Write each field as plain prose paragraphs — quote exact language freely where it's useful (e.g. a mission statement), you don't need to avoid quotation marks or escape anything here.`;
 
 export async function researchCompany(company: string, role: string): Promise<CompanyResearch> {
   const anthropic = getAnthropic();
@@ -25,15 +32,16 @@ export async function researchCompany(company: string, role: string): Promise<Co
   const message = await anthropic.messages.create({
     model: MODEL,
     // Generous headroom: this call can loop through several searches plus
-    // narration before its final JSON message, and a truncated response
-    // (stop_reason "max_tokens") looks identical to a malformed one.
+    // narration before its final markdown message, and a truncated
+    // response (stop_reason "max_tokens") looks identical to a malformed
+    // one.
     max_tokens: 8000,
     // claude-sonnet-5 defaults to adaptive thinking, which silently spends
     // part of max_tokens on `thinking` blocks before the model ever writes
     // its answer — with a tool-use call like this one (multiple search
     // rounds), that budget can run out entirely before a final text block
     // is produced, and getFinalText() then has nothing to parse. This is a
-    // structured-JSON-only call with no need for visible reasoning, so
+    // structured-output-only call with no need for visible reasoning, so
     // thinking is turned off rather than raced against the token budget.
     thinking: { type: "disabled" },
     system: SYSTEM_PROMPT,
@@ -53,12 +61,18 @@ export async function researchCompany(company: string, role: string): Promise<Co
   });
 
   const text = getFinalText(message.content, message.stop_reason);
-  const parsed = parseJsonResponse<Partial<CompanyResearch>>(text, "Research call", message.stop_reason);
+  const sections = requireMarkdownSections(text, "Research call", message.stop_reason);
+
+  const sourcesRaw = sections.get("sources") ?? "";
+  const sources = sourcesRaw
+    .split("\n")
+    .map((line) => line.replace(/^[-*]\s*/, "").trim())
+    .filter(Boolean);
 
   return {
-    basicInfo: parsed.basicInfo || "Not found.",
-    recentNews: parsed.recentNews || "Not found.",
-    culture: parsed.culture || "Not found.",
-    sources: Array.isArray(parsed.sources) ? parsed.sources : [],
+    basicInfo: sections.get("basic info") || "Not found.",
+    recentNews: sections.get("recent news") || "Not found.",
+    culture: sections.get("culture") || "Not found.",
+    sources,
   };
 }

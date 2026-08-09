@@ -3,74 +3,56 @@
 import { useState } from "react";
 import { theme, sansFont } from "@/lib/theme";
 import { inputStyle, labelClass, labelStyle } from "@/components/formStyles";
-import { JdInputField } from "@/components/JdInputField";
-import { ResumeInputField } from "@/components/ResumeInputField";
-import { SAMPLE_APPLICANT_NAME, SAMPLE_COMPANY, SAMPLE_JD, SAMPLE_RESUME, SAMPLE_ROLE } from "@/lib/sample-data";
-import type { GenerateRequest } from "@/types";
+import type { LogAppliedRequest } from "@/types";
 
-export type NewPrepInput = GenerateRequest;
-
-interface NewPrepFormProps {
-  onGenerate: (input: NewPrepInput) => Promise<void>;
+export interface LogAppliedFormProps {
+  onLogApplied: (input: LogAppliedRequest) => Promise<void>;
 }
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
+// "Log Applied" quick-add — the second opportunity-creation entry point
+// (see spec supplement "New — 'Log Applied' quick-add"). Creates the
+// opportunity record only: no JD, no resume, no generation. For when
+// you've applied somewhere with no screen scheduled yet — add the JD and
+// generate the Recruiter Screen prep later, once one is.
+export function LogAppliedForm({ onLogApplied }: LogAppliedFormProps) {
   const [applicantName, setApplicantName] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [appliedDate, setAppliedDate] = useState(todayIsoDate);
-  const [jd, setJd] = useState("");
-  const [resume, setResume] = useState("");
 
-  const [generating, setGenerating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = applicantName.trim() && company.trim() && role.trim() && jd.trim() && resume.trim() && !generating;
+  const canSubmit = applicantName.trim() && company.trim() && role.trim() && !submitting;
 
-  const handleGenerate = async () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
-    setGenerating(true);
+    setSubmitting(true);
     setError(null);
     try {
-      await onGenerate({
+      await onLogApplied({
         applicantName: applicantName.trim(),
         company: company.trim(),
         role: role.trim(),
-        jdText: jd,
-        resumeText: resume,
         appliedDate: appliedDate || undefined,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Generation failed.");
+      setError(err instanceof Error ? err.message : "Failed to log the opportunity.");
     } finally {
-      setGenerating(false);
+      setSubmitting(false);
     }
-  };
-
-  const loadSample = () => {
-    setApplicantName(SAMPLE_APPLICANT_NAME);
-    setCompany(SAMPLE_COMPANY);
-    setRole(SAMPLE_ROLE);
-    setJd(SAMPLE_JD);
-    setResume(SAMPLE_RESUME);
-    setError(null);
   };
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex justify-end -mb-2">
-        <button
-          onClick={loadSample}
-          className="text-[11px] cursor-pointer"
-          style={{ color: theme.signal, fontFamily: sansFont }}
-        >
-          Load sample JD + resume
-        </button>
-      </div>
+      <p className="text-[11px]" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+        Applied somewhere with no screen scheduled yet? Log it now — add the JD and generate the Recruiter Screen
+        prep later, once one is.
+      </p>
 
       <div>
         <label className={labelClass} style={labelStyle}>
@@ -125,25 +107,6 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
         />
       </div>
 
-      <JdInputField
-        value={jd}
-        onChange={setJd}
-        onFieldsExtracted={({ company: extractedCompany, role: extractedRole }) => {
-          // Best-effort suggestion from Call 0 — only fills fields the
-          // user hasn't already typed into, and stays fully editable
-          // either way; never treated as authoritative.
-          if (extractedCompany && !company.trim()) setCompany(extractedCompany);
-          if (extractedRole && !role.trim()) setRole(extractedRole);
-        }}
-      />
-
-      <ResumeInputField
-        value={resume}
-        onChange={setResume}
-        label="Resume"
-        helperText="Not stored — used once for this prep, then discarded."
-      />
-
       {error && (
         <p className="text-xs" style={{ color: theme.danger, fontFamily: sansFont }}>
           {error}
@@ -151,7 +114,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
       )}
 
       <button
-        onClick={handleGenerate}
+        onClick={handleSubmit}
         disabled={!canSubmit}
         className="text-sm py-2.5 mt-1 tracking-wide cursor-pointer disabled:cursor-not-allowed"
         style={{
@@ -162,7 +125,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
           opacity: canSubmit ? 1 : 0.5,
         }}
       >
-        {generating ? "Researching & generating…" : "Generate prep doc"}
+        {submitting ? "Logging…" : "Log applied"}
       </button>
     </div>
   );

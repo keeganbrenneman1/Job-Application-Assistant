@@ -10,7 +10,8 @@
 // generation pipeline.
 
 import { getAnthropic, MODEL } from "@/lib/ai/client";
-import { getFinalText, parseJsonResponse } from "@/lib/ai/json-response";
+import { getFinalText } from "@/lib/ai/response-text";
+import { parseJsonResponse } from "@/lib/ai/json-response";
 import { isMockMode } from "@/lib/ai";
 
 const SYSTEM_PROMPT = `Identify the hiring company name and the job title/role from this job description text.

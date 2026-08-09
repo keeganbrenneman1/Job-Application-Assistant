@@ -3,10 +3,15 @@
 import { useState } from "react";
 import { Chrome, type View } from "@/components/Chrome";
 import { NewPrepForm, type NewPrepInput } from "@/components/NewPrepForm";
+import { LogAppliedForm } from "@/components/LogAppliedForm";
 import { OpportunityDetail } from "@/components/OpportunityDetail";
 import { Archive } from "@/components/Archive";
 import type {
+  FirstPrepRequest,
+  FirstPrepResponse,
   GenerateResponse,
+  LogAppliedRequest,
+  LogAppliedResponse,
   NextStepRequest,
   NextStepResponse,
   OpportunitySummary,
@@ -51,6 +56,33 @@ export default function App() {
     setActiveOpportunity({ ...opportunity, preps: [prep] });
   };
 
+  const handleLogApplied = async (input: LogAppliedRequest) => {
+    const res = await fetch("/api/opportunities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to log the opportunity.");
+
+    const { opportunity } = data as LogAppliedResponse;
+    setActiveOpportunity({ ...opportunity, preps: [] });
+  };
+
+  const handleGenerateFirstPrep = async (input: FirstPrepRequest) => {
+    if (!activeOpportunity) return;
+    const res = await fetch(`/api/opportunities/${activeOpportunity.id}/first-prep`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Generation failed.");
+
+    const { opportunity, prep } = data as FirstPrepResponse;
+    setActiveOpportunity({ ...opportunity, preps: [prep] });
+  };
+
   const handleGenerateNextStep = async (input: NextStepRequest) => {
     if (!activeOpportunity) return;
     const res = await fetch(`/api/opportunities/${activeOpportunity.id}/next-step`, {
@@ -65,6 +97,18 @@ export default function App() {
     setActiveOpportunity((current) =>
       current ? { ...opportunity, preps: [prep, ...current.preps] } : { ...opportunity, preps: [prep] }
     );
+  };
+
+  const handleUpdateAppliedDate = async (appliedDate: string | null) => {
+    if (!activeOpportunity) return;
+    const res = await fetch(`/api/opportunities/${activeOpportunity.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ appliedDate }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to update applied date.");
+    setActiveOpportunity(data.opportunity as OpportunityWithPreps);
   };
 
   const handleOpenOpportunity = async (id: string) => {
@@ -92,10 +136,14 @@ export default function App() {
         <OpportunityDetail
           opportunity={activeOpportunity}
           onGenerateNextStep={handleGenerateNextStep}
+          onGenerateFirstPrep={handleGenerateFirstPrep}
+          onUpdateAppliedDate={handleUpdateAppliedDate}
           onBack={() => setActiveOpportunity(null)}
         />
       ) : view === "new" ? (
         <NewPrepForm onGenerate={handleGenerate} />
+      ) : view === "log-applied" ? (
+        <LogAppliedForm onLogApplied={handleLogApplied} />
       ) : (
         <Archive
           items={archive}

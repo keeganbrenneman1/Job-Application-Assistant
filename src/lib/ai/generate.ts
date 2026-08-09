@@ -7,7 +7,8 @@
 // that's Call 1's output, shown once per opportunity, not per stage.
 
 import { getAnthropic, MODEL } from "@/lib/ai/client";
-import { getFinalText, parseJsonResponse } from "@/lib/ai/json-response";
+import { getFinalText } from "@/lib/ai/response-text";
+import { requireMarkdownSections } from "@/lib/ai/markdown-response";
 import type { CompanyResearch, StageContent, StageSectionDef } from "@/types";
 
 const TONE_RULES = `Tone, throughout every section: candid over supportive. Do not default to encouraging or uniformly-positive language anywhere in the doc. This is a preparation tool, not reassurance — a candidate who walks in blind to a real weakness is worse off than one who saw it coming. Wherever the underlying material is genuinely mixed, uneven, or weak, say so plainly instead of softening it into vague positivity.`;
@@ -19,8 +20,8 @@ function buildSystemPrompt(
   hasPriorStage: boolean,
   interviewerTitle: string | null
 ): string {
-  const shape = sections.map((s) => `  "${s.key}": "string"`).join(",\n");
-  const sectionGuidance = sections.map((s) => `- "${s.key}" (${s.label}): ${s.subtext}.`).join("\n");
+  const headerList = sections.map((s) => `## ${s.label}`).join("\n");
+  const sectionGuidance = sections.map((s) => `- "${s.label}": ${s.subtext}.`).join("\n");
   const resumeNote = hasResume
     ? ", plus their resume"
     : " (no resume was supplied this time — reason from the JD, the company research, and any resume-derived content already present in the prior-stage material, per the candidate's choice not to re-upload it)";
@@ -39,18 +40,16 @@ ${sectionGuidance}
 ${TONE_RULES}
 
 Rules:
-- Never produce a "company" or company-snapshot section, under any key — that's handled separately and shown once per opportunity, not per stage.
+- Never produce a "Company" or company-snapshot section, under any header — that's handled separately and shown once per opportunity, not per stage.
 - Ground every claim in what you were actually given (JD, research, resume if present, prior-stage content if present, additional context if present) — no invented specifics.
 - Where a section calls for likely questions or topics, give short frameworks for answering, not scripted answers or solved problems.
 ${interviewerTitle ? `- The interviewer's title (${interviewerTitle}) is a real input to your reasoning, not a decorative header — let it actively shape multiple sections, not just get name-checked once:\n  - Likely questions/topics: weight these toward what someone in that specific position actually probes for. A senior/strategic title (e.g. a CTO, a VP) tends to probe strategy, tradeoffs, and judgment; an IC-level or hands-on title tends to probe implementation detail and day-to-day execution. Don't give the same generic question list regardless of who's asking.\n  - Fit/role-fit content: emphasize the parts of the candidate's background most relevant to that specific person's vantage point, not a generic JD-wide fit that would read identically for any interviewer.\n  - Questions to ask: make these specific to what's genuinely worth asking someone in that exact position — not interchangeable with what you'd ask anyone else in the room.\n` : ""}- If additional context was supplied for this stage, let it visibly shape the output rather than treating it as decoration.
 - If prior-stage content was supplied, stay visibly continuous with it — no contradictions if placed side by side.
 - Keep each section to 2-5 sentences, written for someone scanning right before this stage.
-- Your output will be parsed by a strict JSON parser. When quoting exact language (from the JD, a resume, or anywhere else), use single quotes (') around it, never double quotes ("), and never use a literal double-quote character inside any string value for any other reason — an unescaped one breaks the whole response.
+- Write each section as plain prose. Quote exact language freely where it's useful (e.g. exact JD phrasing) — you don't need to avoid quotation marks or escape anything.
 
-Respond with ONLY a JSON object (no markdown fences, no commentary) matching exactly this shape:
-{
-${shape}
-}`;
+Respond with ONLY markdown using exactly these "##" headers, in this exact order, and nothing else before, between, or after their content — no JSON, no code fences, no preamble or closing remarks:
+${headerList}`;
 }
 
 export interface PriorStageContext {
@@ -129,18 +128,18 @@ export async function generateStagePrepContent(params: {
     // See src/lib/ai/research.ts for why this is explicit: claude-sonnet-5
     // defaults to adaptive thinking, which can consume the whole
     // max_tokens budget on `thinking` blocks before ever producing the
-    // final JSON text block this call needs.
+    // final text block this call needs.
     thinking: { type: "disabled" },
     system: systemPrompt,
     messages: [{ role: "user", content: parts.join("\n") }],
   });
 
   const text = getFinalText(message.content, message.stop_reason);
-  const parsed = parseJsonResponse<Record<string, string>>(text, "Generation call", message.stop_reason);
+  const parsedSections = requireMarkdownSections(text, "Generation call", message.stop_reason);
 
   const content: StageContent = {};
   for (const section of sections) {
-    content[section.key] = parsed[section.key] || "";
+    content[section.key] = parsedSections.get(section.label.trim().toLowerCase()) || "";
   }
   return content;
 }
