@@ -4,8 +4,7 @@ Faster, tailored interview prep grounded in the real job description, the candid
 and current company information, across the whole interview pipeline. Built for
 personal use (Keegan + spouse) during an active job search, and as a portfolio piece
 demonstrating a hybrid grounded-generation architecture (deterministic extraction + live
-search-grounded research + separate reasoning call). 
-/nNote: Focused on the steps following securing an initial interview right now.
+search-grounded research + separate reasoning call). Note: Focused on the steps following securing an initial interview right now.
 ## What it does (v2)
 Paste or upload a resume and a job description (text or URL) to generate a Recruiter
 Screen prep doc: company snapshot, fit talking points, likely questions, questions to
