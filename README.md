@@ -32,7 +32,8 @@ Supabase project is wired up. Not yet deployed or run against a live Claude API 
 ## What's not built yet
 - Removing the 2-stage cap and adding a rolling cross-stage summary (v3)
 - Persisted, reusable interview-stage sequences (v3)
-- Interactive mock Q&A, stage tracker (v-next)
+- A request for additional context going into the recruiter screen (v4)
+- Interactive mock Q&A, stage tracker, general reorganizing to promote PDF usage and extraction (v-next)
 
 ## Stack
 Next.js 16 (App Router, TypeScript, Tailwind) on GitHub Codespaces (build) → Vercel +
