@@ -31,17 +31,28 @@ function memoryDB(): MemoryDB {
   return globalForMemory.__jaaMemoryDB;
 }
 
+// jdText is '' for a "Log Applied" quick-add (no JD collected yet) and the
+// real JD text for the "New Opportunity" path, which generates the
+// Recruiter Screen prep immediately. appliedDate is nullable so it can be
+// left unset either way and backfilled later.
 export async function createOpportunity(
   applicantName: string,
   company: string,
   role: string,
-  jdText: string
+  jdText: string,
+  appliedDate: string | null
 ): Promise<Opportunity> {
   const supabase = getSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("opportunities")
-      .insert({ applicant_name: applicantName, company, role, jd_text: jdText })
+      .insert({
+        applicant_name: applicantName,
+        company,
+        role,
+        jd_text: jdText,
+        applied_date: appliedDate,
+      })
       .select()
       .single();
     if (error) throw new Error(`createOpportunity: ${error.message}`);
@@ -55,10 +66,52 @@ export async function createOpportunity(
     role,
     jdText,
     companyResearch: null,
+    appliedDate,
     createdAt: new Date().toISOString(),
   };
   memoryDB().opportunities.unshift(opportunity);
   return opportunity;
+}
+
+// Sets the JD once a quick-added opportunity's first (Recruiter Screen)
+// prep is generated — quick-add creates the record with jdText: '', this
+// fills it in at that point so it's persisted and reused for stage 2 same
+// as the "New Opportunity" path (see spec "JD carries forward").
+export async function setOpportunityJdText(opportunityId: string, jdText: string): Promise<void> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ jd_text: jdText })
+      .eq("id", opportunityId);
+    if (error) throw new Error(`setOpportunityJdText: ${error.message}`);
+    return;
+  }
+
+  const opportunity = memoryDB().opportunities.find((o) => o.id === opportunityId);
+  if (opportunity) opportunity.jdText = jdText;
+}
+
+// Backfill/edit for applied_date — manually editable on the Opportunity
+// Detail page regardless of which path created the record (quick-add
+// opportunities start with it set; New Opportunity ones do too; anything
+// that predates this field starts null until set here).
+export async function setOpportunityAppliedDate(
+  opportunityId: string,
+  appliedDate: string | null
+): Promise<void> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ applied_date: appliedDate })
+      .eq("id", opportunityId);
+    if (error) throw new Error(`setOpportunityAppliedDate: ${error.message}`);
+    return;
+  }
+
+  const opportunity = memoryDB().opportunities.find((o) => o.id === opportunityId);
+  if (opportunity) opportunity.appliedDate = appliedDate;
 }
 
 // Call 1's research result, persisted once and reused for every later
@@ -230,6 +283,7 @@ function rowToOpportunity(row: any): Opportunity {
     role: row.role,
     jdText: row.jd_text,
     companyResearch: row.company_research ?? null,
+    appliedDate: row.applied_date ?? null,
     createdAt: row.created_at,
   };
 }

@@ -24,6 +24,13 @@
 -- - `preps` also gain `interviewer_title` (optional, short, user-entered)
 --   and `stage_type` gains a `hiring_manager` option, both from the v2
 --   build brief supplement rather than the original spec.
+-- - `opportunities` gain `applied_date` (nullable date) — an opportunity
+--   can now be created via the "Log Applied" quick-add path (company,
+--   role, applicant name, applied date only — no JD/resume/generation)
+--   as well as the original "New Opportunity" path, which also gains
+--   this field. Nullable specifically so existing pre-this-field
+--   opportunities can be backfilled after the fact from the Opportunity
+--   Detail page rather than needing a forced default.
 
 create extension if not exists "pgcrypto";
 
@@ -34,6 +41,7 @@ create table if not exists opportunities (
   role text not null,
   jd_text text not null default '',
   company_research jsonb,
+  applied_date date, -- nullable: unset for a "Log Applied" quick-add until the user sets it, or for pre-existing opportunities until backfilled
   created_at timestamptz not null default now()
 );
 
@@ -92,6 +100,13 @@ begin
     where table_name = 'opportunities' and column_name = 'jd_text'
   ) then
     alter table opportunities add column jd_text text not null default '';
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns
+    where table_name = 'opportunities' and column_name = 'applied_date'
+  ) then
+    alter table opportunities add column applied_date date;
   end if;
 
   if not exists (

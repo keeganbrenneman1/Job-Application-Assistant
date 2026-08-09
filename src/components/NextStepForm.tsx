@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { theme, sansFont } from "@/lib/theme";
+import { inputStyle, labelClass, labelStyle } from "@/components/formStyles";
+import { ResumeInputField } from "@/components/ResumeInputField";
 import { NEXT_STEP_STAGE_TYPES } from "@/types";
 import type { NextStepRequest, StageType } from "@/types";
 
@@ -11,16 +13,6 @@ export interface NextStepFormProps {
   onGenerate: (input: NextStepRequest) => Promise<void>;
   onCancel: () => void;
 }
-
-const inputStyle = {
-  background: theme.panelRaised,
-  border: `1px solid ${theme.rule}`,
-  color: theme.paper,
-  fontFamily: sansFont,
-};
-
-const labelClass = "text-xs uppercase tracking-wide block mb-1.5";
-const labelStyle = { color: theme.paperMuted, fontFamily: sansFont };
 
 // Generate Next Step form (see spec "v2 flow" step 4): stage type dropdown,
 // optional additional-context free text, optional resume, JD reused
@@ -32,36 +24,11 @@ export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps
   const [jdExpanded, setJdExpanded] = useState(false);
   const [additionalContext, setAdditionalContext] = useState("");
   const [resume, setResume] = useState("");
-  const [resumeFileName, setResumeFileName] = useState<string | null>(null);
-  const [parsingResume, setParsingResume] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resumeFileInputRef = useRef<HTMLInputElement>(null);
-
   const needsCustomLabel = stageType === "other";
-  const canSubmit = (!needsCustomLabel || customLabel.trim()) && !generating && !parsingResume;
-
-  const handleResumeFileUpload = async (file: File) => {
-    setParsingResume(true);
-    setError(null);
-    try {
-      const formData = new FormData();
-      formData.append("resume", file);
-      const res = await fetch("/api/parse-resume", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Couldn't parse that file — paste the text instead.");
-      } else {
-        setResume(data.text);
-        setResumeFileName(file.name);
-      }
-    } catch {
-      setError("Couldn't parse that file — paste the text instead.");
-    } finally {
-      setParsingResume(false);
-    }
-  };
+  const canSubmit = (!needsCustomLabel || customLabel.trim()) && !generating;
 
   const handleGenerate = async () => {
     if (!canSubmit) return;
@@ -177,50 +144,22 @@ export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps
         />
       </div>
 
-      <div>
-        <label className={labelClass} style={labelStyle}>
-          Resume <span style={{ opacity: 0.6 }}>(recommended)</span>
-        </label>
-        <p className="text-[11px] mb-2" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-          Not required — omitting it still uses prior-stage content + JD + company research. Recommended for stages
-          like this one, though: they often benefit from resume specifics the Recruiter Screen prep wasn&apos;t
-          written to surface. Not stored either way.
-        </p>
-        <div className="flex items-center gap-2 mb-2">
-          <button
-            onClick={() => resumeFileInputRef.current?.click()}
-            disabled={parsingResume}
-            className="text-xs px-3 py-2 border shrink-0 cursor-pointer disabled:cursor-not-allowed"
-            style={{ borderColor: theme.rule, color: theme.paperMuted, fontFamily: sansFont, opacity: parsingResume ? 0.6 : 1 }}
-          >
-            {parsingResume ? "Parsing…" : "Upload PDF/DOCX"}
-          </button>
-          {resumeFileName && (
-            <span className="text-[11px]" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-              {resumeFileName}
-            </span>
-          )}
-          <input
-            ref={resumeFileInputRef}
-            type="file"
-            accept=".pdf,.docx,.txt"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleResumeFileUpload(file);
-              e.target.value = "";
-            }}
-          />
-        </div>
-        <textarea
-          value={resume}
-          onChange={(e) => setResume(e.target.value)}
-          placeholder="Paste resume text, or upload above — leave blank to skip"
-          rows={4}
-          className="w-full px-3 py-2.5 text-sm outline-none"
-          style={inputStyle}
-        />
-      </div>
+      <ResumeInputField
+        value={resume}
+        onChange={setResume}
+        label={
+          <>
+            Resume <span style={{ opacity: 0.6 }}>(recommended)</span>
+          </>
+        }
+        helperText={
+          <>
+            Not required — omitting it still uses prior-stage content + JD + company research. Recommended for
+            stages like this one, though: they often benefit from resume specifics the Recruiter Screen prep
+            wasn&apos;t written to surface. Not stored either way.
+          </>
+        }
+      />
 
       {error && (
         <p className="text-xs" style={{ color: theme.danger, fontFamily: sansFont }}>
