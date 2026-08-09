@@ -6,6 +6,7 @@ import { NewPrepForm, type NewPrepInput } from "@/components/NewPrepForm";
 import { LogAppliedForm } from "@/components/LogAppliedForm";
 import { OpportunityDetail } from "@/components/OpportunityDetail";
 import { Archive } from "@/components/Archive";
+import { theme, sansFont } from "@/lib/theme";
 import type {
   FirstPrepRequest,
   FirstPrepResponse,
@@ -23,6 +24,7 @@ export default function App() {
   const [archive, setArchive] = useState<OpportunitySummary[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(false);
   const [activeOpportunity, setActiveOpportunity] = useState<OpportunityWithPreps | null>(null);
+  const [showLogAppliedForm, setShowLogAppliedForm] = useState(false);
 
   // Shared across both users — see spec "User & data model". Applicant
   // name is captured per-opportunity (set in the New Prep form itself),
@@ -40,6 +42,7 @@ export default function App() {
 
   const changeView = (v: View) => {
     setView(v);
+    setShowLogAppliedForm(false);
     if (v === "archive") loadArchive();
   };
 
@@ -66,6 +69,7 @@ export default function App() {
     if (!res.ok) throw new Error(data.error || "Failed to log the opportunity.");
 
     const { opportunity } = data as LogAppliedResponse;
+    setShowLogAppliedForm(false);
     setActiveOpportunity({ ...opportunity, preps: [] });
   };
 
@@ -128,10 +132,10 @@ export default function App() {
     setArchive((prev) => prev.filter((o) => o.id !== id));
   };
 
-  const showingArchive = view === "archive" && !activeOpportunity;
+  const showingArchiveList = view === "archive" && !activeOpportunity && !showLogAppliedForm;
 
   return (
-    <Chrome view={view} setView={changeView} wide={showingArchive}>
+    <Chrome view={view} setView={changeView} wide={showingArchiveList}>
       {activeOpportunity ? (
         <OpportunityDetail
           opportunity={activeOpportunity}
@@ -142,14 +146,24 @@ export default function App() {
         />
       ) : view === "new" ? (
         <NewPrepForm onGenerate={handleGenerate} />
-      ) : view === "log-applied" ? (
-        <LogAppliedForm onLogApplied={handleLogApplied} />
+      ) : showLogAppliedForm ? (
+        <div>
+          <button
+            onClick={() => setShowLogAppliedForm(false)}
+            className="text-xs mb-4 cursor-pointer"
+            style={{ color: theme.signal, fontFamily: sansFont }}
+          >
+            ← back
+          </button>
+          <LogAppliedForm onLogApplied={handleLogApplied} />
+        </div>
       ) : (
         <Archive
           items={archive}
           loading={archiveLoading}
           onOpen={handleOpenOpportunity}
           onDelete={handleDeleteOpportunity}
+          onLogApplied={() => setShowLogAppliedForm(true)}
         />
       )}
     </Chrome>
