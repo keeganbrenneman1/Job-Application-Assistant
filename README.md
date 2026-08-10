@@ -46,6 +46,7 @@ no new Claude call. Not yet deployed or run against a live Claude API key.
 ## What's not built yet
 - **v4:** remove the 2-stage cap — reuse the "next step" option as many times as necessary. Uses context of all prior stages (plural), not just the last one, when creating prep content for the current stage. (Mechanism: rolling summary, rewritten after each stage generation, stored on the opportunity — not full raw text per prior stage.)
 - **v-next:**
+  - Re-request the prep documents for the existing stage. This intends to support the use case where 1) the company snapshot is lost for some reason and needs recovered AND 2) the user adds additional context and wants it incorporated
   - Stage-specific context (later refinement — likely unifying v2's per-stage field and v3's opportunity-level field, e.g. tagging opportunity-level context as stage-specific when needed; not fully resolved)
   - Resume optimization
   - Feedback collection AND use, kept together as one item (not split into phases — attribution question between Keegan and spouse is unresolved: v1 has no per-user separation)
