@@ -69,10 +69,21 @@ export async function researchCompany(company: string, role: string): Promise<Co
     .map((line) => line.replace(/^[-*]\s*/, "").trim())
     .filter(Boolean);
 
-  return {
-    basicInfo: sections.get("basic info") || "Not found.",
-    recentNews: sections.get("recent news") || "Not found.",
-    culture: sections.get("culture") || "Not found.",
-    sources,
-  };
+  const basicInfo = sections.get("basic info") || "Not found.";
+  const recentNews = sections.get("recent news") || "Not found.";
+  const culture = sections.get("culture") || "Not found.";
+
+  // Diagnostic: requireMarkdownSections only throws when it finds zero
+  // headers total, so a response missing just one or two expected sections
+  // (out of "basic info" / "recent news" / "culture") never errors — it
+  // just silently falls back per-field, with nothing logged. If that
+  // happens, log what Claude actually wrote and which headers were parsed
+  // out of it, so a recurrence is diagnosable instead of a guessing game.
+  if (basicInfo === "Not found." || recentNews === "Not found." || culture === "Not found.") {
+    console.warn(
+      `[Research call] missing section(s) for "${company}". Parsed headers: [${[...sections.keys()].join(", ")}]. Raw response:\n${text}`
+    );
+  }
+
+  return { basicInfo, recentNews, culture, sources };
 }
