@@ -30,10 +30,25 @@ opportunity/stage-prep storage with an in-memory fallback for local dev before a
 Supabase project is wired up. Not yet deployed or run against a live Claude API key.
 
 ## What's not built yet
-- Removing the 2-stage cap and adding a rolling cross-stage summary (v3)
-- Persisted, reusable interview-stage sequences (v3)
-- A request for additional context going into the recruiter screen (v4)
-- Interactive mock Q&A, stage tracker, general reorganizing to promote PDF usage and extraction (v-next)
+## What's not built yet
+
+- **v3:** one persistent, opportunity-level free-text context field (not stage-scoped) that feeds every future generation for that opportunity. Additive on top of v2's existing per-stage additional-context field, not a replacement. Examples: interviewer email contents, notes on how a prior session actually went.
+- **v4:** remove the 2-stage cap — reuse the "next step" option as many times as necessary. Uses context of all prior stages (plural), not just the last one, when creating prep content for the current stage. (Mechanism: rolling summary, rewritten after each stage generation, stored on the opportunity — not full raw text per prior stage.)
+- **v-next:**
+  - Stage-specific context (later refinement — likely unifying v2's per-stage field and v3's opportunity-level field, e.g. tagging opportunity-level context as stage-specific when needed; not fully resolved)
+  - Resume optimization
+  - Feedback collection AND use, kept together as one item (not split into phases — attribution question between Keegan and spouse is unresolved: v1 has no per-user separation)
+  - Interactive mock Q&A
+  - Stage-by-stage tracker/dashboard
+  - Persisted/reusable named interview-stage-sequence templates
+  - Broader PDF-extraction goal: ideal state is uploading a JD PDF and a resume PDF and having everything auto-extracted (e.g. applicant name currently isn't pulled from the resume) — not just the current lightweight Call 0 field-extraction path
+  - Changing the data model to no-auth/shareable-via-link for anyone — flagged as a major re-architecture, not a checkbox: reopens cost guardrails, the ephemeral-resume/interviewer-PDF privacy stance, and company-research caching, all currently designed around "two known people," not the general public
+
+## Someday, not scoped (fuzzy, no committed version)
+
+- **Big-picture vision:** extend beyond interview-cycle prep into resume optimization — per-JD tailoring (repurposing Call 1 research + Call 2 fit reasoning, positioned before submission rather than after a screen is scheduled) AND informed by accumulated feedback across opportunities over time. Also wants something useful to come out of failed/closed opportunities specifically — implies an outcome/status field (rejected, no response, withdrawn) the current data model doesn't capture. Depends on the same feedback-attribution question above being resolved first.
+- **Conversational refinement of a prep doc:** after initial generation, a chat-style back-and-forth to react/correct/add context and have the doc evolve — different from v3's one-shot field or the static Regenerate button. Needs multi-turn conversation storage per stage-prep and a decision on full-doc vs. section-level regeneration per turn.
+
 
 ## Stack
 Next.js 16 (App Router, TypeScript, Tailwind) on GitHub Codespaces (build) → Vercel +
