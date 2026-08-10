@@ -12,7 +12,11 @@ import type { FirstPrepRequest, NextStepRequest, OpportunityWithPreps } from "@/
 interface OpportunityDetailProps {
   opportunity: OpportunityWithPreps;
   onGenerateNextStep: (input: NextStepRequest) => Promise<void>;
-  onGenerateFirstPrep: (input: FirstPrepRequest) => Promise<void>;
+  // onStage lets FirstPrepForm show granular progress text — this path now
+  // runs research and generation as two separate requests (see
+  // src/app/page.tsx's handleGenerateFirstPrep) rather than one combined
+  // call, so the wait is longer/lumpier than a single spinner suggests.
+  onGenerateFirstPrep: (input: FirstPrepRequest, onStage: (stage: string) => void) => Promise<void>;
   onUpdateAppliedDate: (appliedDate: string | null) => Promise<void>;
   onUpdateAdditionalContext: (additionalContext: string | null) => Promise<void>;
   onRegenerateResearch: () => Promise<void>;

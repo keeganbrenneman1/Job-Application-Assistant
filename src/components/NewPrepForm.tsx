@@ -11,7 +11,11 @@ import type { GenerateRequest } from "@/types";
 export type NewPrepInput = GenerateRequest;
 
 interface NewPrepFormProps {
-  onGenerate: (input: NewPrepInput) => Promise<void>;
+  // onStage reports progress across the now-multi-step generation flow
+  // (create → research → generate, each a separate request — see
+  // src/app/page.tsx's handleGenerate) so the button reflects what's
+  // actually happening instead of one static label for the whole wait.
+  onGenerate: (input: NewPrepInput, onStage: (stage: string) => void) => Promise<void>;
 }
 
 function todayIsoDate(): string {
@@ -28,6 +32,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
   const [additionalContext, setAdditionalContext] = useState("");
 
   const [generating, setGenerating] = useState(false);
+  const [stage, setStage] = useState("Working…");
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit = applicantName.trim() && company.trim() && role.trim() && jd.trim() && resume.trim() && !generating;
@@ -37,15 +42,18 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
     setGenerating(true);
     setError(null);
     try {
-      await onGenerate({
-        applicantName: applicantName.trim(),
-        company: company.trim(),
-        role: role.trim(),
-        jdText: jd,
-        resumeText: resume,
-        appliedDate: appliedDate || undefined,
-        additionalContext: additionalContext.trim() || undefined,
-      });
+      await onGenerate(
+        {
+          applicantName: applicantName.trim(),
+          company: company.trim(),
+          role: role.trim(),
+          jdText: jd,
+          resumeText: resume,
+          appliedDate: appliedDate || undefined,
+          additionalContext: additionalContext.trim() || undefined,
+        },
+        setStage
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed.");
     } finally {
@@ -178,7 +186,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
           opacity: canSubmit ? 1 : 0.5,
         }}
       >
-        {generating ? "Researching & generating…" : "Generate prep doc"}
+        {generating ? stage : "Generate prep doc"}
       </button>
     </div>
   );
