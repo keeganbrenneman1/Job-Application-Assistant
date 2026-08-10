@@ -8,12 +8,7 @@ Faster, tailored interview prep grounded in the real job description, the candid
 - **v2:** add a single "next step" option after the Recruiter Screen prep — one additional stage, hard capped at 2 stages total per opportunity. Uses the context of the immediately preceding stage only (no accumulation across more than one hop). Asks for the interviewer’s title to use as context
 - **v3:** remove the v2 cap — reuse the "next step" option as many times as necessary. Uses context of all prior stages (plural), not just the last one, when creating prep content for the current stage
 - **v4:** ability to freely add manual text for use as context and for reasoning and generating prep content (i.e. adding an interviewer’s email contents ahead of an interview or questions answered going into previous session)
-- **v-next:** 
-— stage-specific context 
-— resume optimization 
-— feedback collection
--— use of collected feedback — interactive mock Q&A  — stage-by-stage tracker/dashboard (lower priority than full-process coverage)
-— change data model to no-auth for anybody that wants to use the tool when shared via link
+- **v-next:** stage-specific context; resume optimization; feedback collection (later: use of collected feedback);  interactive mock Q&A; stage-by-stage tracker/dashboard (lower priority than full-process coverage); change data model to no-auth for anybody that wants to use the tool when shared via link
 
 ## User & data model
 - Named 2-user tool (Keegan + spouse), not a public demo.
