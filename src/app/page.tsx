@@ -134,9 +134,12 @@ export default function App() {
     // Diagnostic: without this, a stalled request just leaves the button
     // stuck on "Regenerating…" indefinitely with no visible error —
     // exactly the symptom this is meant to surface instead. Distinguishes
-    // "we gave up waiting" from a real server-side error response.
+    // "we gave up waiting" from a real server-side error response. Set
+    // above the route's own maxDuration=60s (see regenerate-research/
+    // route.ts) so the server's own limit fires first when that's the
+    // actual cause, rather than this racing it and winning by 5s.
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 55000);
+    const timeoutId = setTimeout(() => controller.abort(), 65000);
     let res: Response;
     try {
       res = await fetch(`/api/opportunities/${activeOpportunity.id}/regenerate-research`, {
@@ -146,7 +149,7 @@ export default function App() {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         throw new Error(
-          "Regenerate timed out after 55s with no response — the request may not be reaching the server, or the research call is taking unusually long."
+          "Regenerate timed out after 65s with no response — the request may not be reaching the server, or the research call is taking unusually long."
         );
       }
       throw err;

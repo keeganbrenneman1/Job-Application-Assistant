@@ -5,6 +5,13 @@ import { stageLabelFor } from "@/types";
 import type { GenerateRequest, GenerateResponse } from "@/types";
 
 export const runtime = "nodejs";
+// Call 1 (research) loops through several web-search rounds before
+// producing its final answer and can routinely exceed Vercel's default
+// function duration (10s on Hobby) — without this, the platform kills the
+// invocation outright before our own try/catch ever gets a chance to run,
+// which surfaces client-side as a silent hang rather than a real error.
+// 60s is the max Hobby allows without upgrading.
+export const maxDuration = 60;
 
 // Always the first stage for a new opportunity — subsequent stages go
 // through /api/opportunities/[id]/next-step instead, which reuses the JD

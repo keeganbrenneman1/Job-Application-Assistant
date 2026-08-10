@@ -5,6 +5,10 @@ import { NEXT_STEP_STAGE_TYPES, stageLabelFor } from "@/types";
 import type { NextStepRequest, NextStepResponse, StageType } from "@/types";
 
 export const runtime = "nodejs";
+// See src/app/api/generate/route.ts for why this is set — same Call 1
+// latency risk applies here (research is cached by v2's stage-2 cap, but
+// Call 2 itself can still run long).
+export const maxDuration = 60;
 
 // recruiter_screen deliberately excluded — it's v1's implicit first stage,
 // created at opportunity creation and never re-selectable as a next step.
