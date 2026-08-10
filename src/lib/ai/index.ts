@@ -84,3 +84,15 @@ export async function generatePrep(params: GeneratePrepParams): Promise<Generate
 
   return { content, research, researchIsFresh: !existingResearch, source: "live" };
 }
+
+// On-demand refresh of Call 1 only — for when the cached research on an
+// opportunity came back malformed/incomplete (e.g. a missing markdown
+// section parsed to a literal "Not found.", see src/lib/ai/research.ts).
+// Always runs Call 1 fresh and unconditionally overwrites the opportunity's
+// cached value; distinct from generatePrep's existingResearch reuse above,
+// and from a possible future "re-request prep doc" action (Call 2 only,
+// per-stage — not built).
+export async function regenerateResearch(company: string, role: string): Promise<CompanyResearch> {
+  if (isMockMode()) return MOCK_RESEARCH;
+  return researchCompany(company, role);
+}
