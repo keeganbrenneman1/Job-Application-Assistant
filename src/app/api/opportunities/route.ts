@@ -46,7 +46,8 @@ export async function POST(request: Request) {
       company.trim(),
       role.trim(),
       "",
-      appliedDate?.trim() || null
+      appliedDate?.trim() || null,
+      null
     );
 
     const response: LogAppliedResponse = { opportunity };

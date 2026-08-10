@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { applicantName, company, role, jdText, resumeText, appliedDate } = body;
+  const { applicantName, company, role, jdText, resumeText, appliedDate, additionalContext } = body;
 
   if (!applicantName?.trim()) {
     return NextResponse.json({ error: "applicantName is required." }, { status: 400 });
@@ -50,7 +50,11 @@ export async function POST(request: Request) {
       resumeText: resumeText.trim(),
       priorStage: null,
       additionalContext: null,
-      opportunityAdditionalContext: null, // no opportunity exists yet at this point — v3's field is set afterward, from the Opportunity Detail page
+      // No opportunity record exists yet at this point in the "New
+      // Opportunity" flow (it's created below, after generation), so this
+      // travels in on the request body itself rather than being read back
+      // off a persisted record — see GenerateRequest in src/types/index.ts.
+      opportunityAdditionalContext: additionalContext?.trim() || null,
       interviewerTitle: null,
     });
 
@@ -59,7 +63,8 @@ export async function POST(request: Request) {
       company.trim(),
       role.trim(),
       jdText.trim(),
-      appliedDate?.trim() || null
+      appliedDate?.trim() || null,
+      additionalContext?.trim() || null
     );
     await setOpportunityResearch(opportunity.id, research);
     const prep = await addStagePrep(opportunity.id, FIRST_STAGE, stageLabel, content, null, null, source);

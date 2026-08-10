@@ -34,13 +34,17 @@ function memoryDB(): MemoryDB {
 // jdText is '' for a "Log Applied" quick-add (no JD collected yet) and the
 // real JD text for the "New Opportunity" path, which generates the
 // Recruiter Screen prep immediately. appliedDate is nullable so it can be
-// left unset either way and backfilled later.
+// left unset either way and backfilled later. additionalContext is null
+// for "Log Applied" (added later via the Detail page, once the record
+// already exists) and optionally supplied up front by "New Opportunity",
+// since that path has no existing record to attach it to beforehand.
 export async function createOpportunity(
   applicantName: string,
   company: string,
   role: string,
   jdText: string,
-  appliedDate: string | null
+  appliedDate: string | null,
+  additionalContext: string | null
 ): Promise<Opportunity> {
   const supabase = getSupabase();
   if (supabase) {
@@ -52,6 +56,7 @@ export async function createOpportunity(
         role,
         jd_text: jdText,
         applied_date: appliedDate,
+        additional_context: additionalContext,
       })
       .select()
       .single();
@@ -67,7 +72,7 @@ export async function createOpportunity(
     jdText,
     companyResearch: null,
     appliedDate,
-    additionalContext: null,
+    additionalContext,
     createdAt: new Date().toISOString(),
   };
   memoryDB().opportunities.unshift(opportunity);

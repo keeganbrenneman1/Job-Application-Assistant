@@ -25,6 +25,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
   const [appliedDate, setAppliedDate] = useState(todayIsoDate);
   const [jd, setJd] = useState("");
   const [resume, setResume] = useState("");
+  const [additionalContext, setAdditionalContext] = useState("");
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +44,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
         jdText: jd,
         resumeText: resume,
         appliedDate: appliedDate || undefined,
+        additionalContext: additionalContext.trim() || undefined,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed.");
@@ -143,6 +145,20 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
         label="Resume"
         helperText="Not stored — used once for this prep, then discarded."
       />
+
+      <div>
+        <label className={labelClass} style={labelStyle}>
+          Additional Context <span style={{ opacity: 0.6 }}>(optional)</span>
+        </label>
+        <textarea
+          value={additionalContext}
+          onChange={(e) => setAdditionalContext(e.target.value)}
+          rows={3}
+          placeholder="Anything you already know going in — an interviewer's email, notes from a referral, org-structure detail. Persists on this opportunity and feeds every future generation for it, editable later from the Opportunity Detail page."
+          className="w-full px-3 py-2.5 text-sm outline-none resize-y"
+          style={inputStyle}
+        />
+      </div>
 
       {error && (
         <p className="text-xs" style={{ color: theme.danger, fontFamily: sansFont }}>
