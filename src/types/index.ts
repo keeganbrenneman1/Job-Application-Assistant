@@ -286,6 +286,14 @@ export interface GenerateRequest {
   jdText: string;
   resumeText: string;
   appliedDate?: string; // "YYYY-MM-DD"; the New Opportunity form defaults this to today, editable
+  // Optional v3 opportunity-level context, supplied up front. The New
+  // Opportunity flow creates the opportunity and its Recruiter Screen prep
+  // in one call, so unlike the "Log Applied" path (where this field is
+  // added later via the Opportunity Detail page, after the record already
+  // exists), there's no opportunity to attach it to until this request
+  // finishes — so it has to travel in on the request itself rather than
+  // being read back off an existing record.
+  additionalContext?: string;
 }
 
 export interface GenerateResponse {
