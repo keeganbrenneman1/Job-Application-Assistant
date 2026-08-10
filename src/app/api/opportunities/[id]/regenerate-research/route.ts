@@ -4,6 +4,9 @@ import { getOpportunity, setOpportunityResearch } from "@/lib/store";
 import type { RegenerateResearchResponse } from "@/types";
 
 export const runtime = "nodejs";
+// See src/app/api/generate/route.ts for why this is set — this route
+// always runs Call 1 fresh, so it's the one most exposed to this.
+export const maxDuration = 60;
 
 // Manual, opportunity-level refresh of Call 1 (research) — for when the
 // cached Company Snapshot came back malformed/incomplete (see

@@ -5,6 +5,9 @@ import { stageLabelFor } from "@/types";
 import type { FirstPrepRequest, FirstPrepResponse } from "@/types";
 
 export const runtime = "nodejs";
+// See src/app/api/generate/route.ts for why this is set — same Call 1
+// latency risk applies here.
+export const maxDuration = 60;
 
 const FIRST_STAGE = "recruiter_screen" as const;
 
