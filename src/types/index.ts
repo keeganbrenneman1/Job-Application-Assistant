@@ -332,3 +332,11 @@ export interface FirstPrepRequest {
 }
 
 export type FirstPrepResponse = GenerateResponse; // same {opportunity, prep} shape
+
+// Manual "Regenerate" action on the Company Snapshot block: re-runs Call 1
+// only and overwrites the opportunity's cached research. Opportunity-level
+// and Call-1-only by design — distinct from a possible future "re-request
+// prep doc" action (Call 2 only, per-stage, not built — see README v-next).
+export interface RegenerateResearchResponse {
+  opportunity: OpportunityWithPreps;
+}

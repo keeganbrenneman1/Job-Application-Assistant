@@ -17,6 +17,17 @@ stage generation for that opportunity when non-empty — e.g. an
 interviewer's email contents, notes on how a prior session actually went,
 org-structure detail learned outside the app.
 
+Also added in the same session, prompted by a live-data issue rather than
+the original v3 brief: a manual **Regenerate** action on the Company
+Snapshot block, for when Call 1's research response comes back malformed
+(a missing section renders as a literal "Not found." and, since research is
+otherwise cached for the life of the opportunity, would sit there
+permanently with no other fix). Re-runs Call 1 only and overwrites the
+cached research for that opportunity — deliberately scoped to research
+only, not a stage prep. Distinct from **re-request prep doc**
+(Call 2 only, per-stage, picks up newly backfilled context) — see
+"What's not built yet."
+
 ## What it does (v2)
 Paste or upload a resume and a job description (text or URL) to generate a Recruiter
 Screen prep doc: company snapshot, fit talking points, likely questions, questions to
@@ -41,12 +52,14 @@ generation per stage) behind a single swappable mock/live function, and Supabase
 opportunity/stage-prep storage with an in-memory fallback for local dev before a
 Supabase project is wired up — plus v3's persistent opportunity-level context field
 (`additional_context` on `opportunities`), folded into Call 2's prompt whenever present,
-no new Claude call. Not yet deployed or run against a live Claude API key.
+no new Claude call — plus a manual Company Snapshot regenerate action (re-runs Call 1,
+overwrites the opportunity's cached research). Not yet deployed or run against a live
+Claude API key.
 
 ## What's not built yet
 - **v4:** remove the 2-stage cap — reuse the "next step" option as many times as necessary. Uses context of all prior stages (plural), not just the last one, when creating prep content for the current stage. (Mechanism: rolling summary, rewritten after each stage generation, stored on the opportunity — not full raw text per prior stage.)
 - **v-next:**
-  - Re-request the prep documents for the existing stage. This intends to support the use case where 1) the company snapshot is lost for some reason and needs recovered AND 2) the user adds additional context and wants it incorporated
+  - **Re-request prep doc:** regenerate a single stage prep in place (Call 2 only) so it picks up context backfilled after the fact — an interview-invite email pasted in later, a correction to the interviewer's title, an edit to v3's opportunity-level context field. Originally scoped to cover two cases together (a lost/malformed company snapshot AND backfilled context); the first case is now handled separately by the Company Snapshot **Regenerate** action above, so this item is now Call 2/per-stage only. Kept as its own item rather than folded into that action: different call (Call 2 vs Call 1), different scope (one stage vs the whole opportunity), and bundling them would mean every stage regen silently re-runs research too, which contradicts the v2 spec's firm requirement that research is cached once per opportunity and reused across stages, not re-run per stage.
   - Stage-specific context (later refinement — likely unifying v2's per-stage field and v3's opportunity-level field, e.g. tagging opportunity-level context as stage-specific when needed; not fully resolved)
   - Resume optimization
   - Feedback collection AND use, kept together as one item (not split into phases — attribution question between Keegan and spouse is unresolved: v1 has no per-user separation)
@@ -58,7 +71,7 @@ no new Claude call. Not yet deployed or run against a live Claude API key.
 
 ## Someday, not scoped (fuzzy, no committed version)
 - **Big-picture vision:** extend beyond interview-cycle prep into resume optimization — per-JD tailoring (repurposing Call 1 research + Call 2 fit reasoning, positioned before submission rather than after a screen is scheduled) AND informed by accumulated feedback across opportunities over time. Also wants something useful to come out of failed/closed opportunities specifically — implies an outcome/status field (rejected, no response, withdrawn) the current data model doesn't capture. Depends on the same feedback-attribution question above being resolved first.
-- **Conversational refinement of a prep doc:** after initial generation, a chat-style back-and-forth to react/correct/add context and have the doc evolve — different from v3's one-shot field or the static Regenerate button. Needs multi-turn conversation storage per stage-prep and a decision on full-doc vs. section-level regeneration per turn.
+- **Conversational refinement of a prep doc:** after initial generation, a chat-style back-and-forth to react/correct/add context and have the doc evolve — different from v3's one-shot field or the static "re-request prep doc" regenerate (v-next, above). Needs multi-turn conversation storage per stage-prep and a decision on full-doc vs. section-level regeneration per turn.
 
 
 ## Stack

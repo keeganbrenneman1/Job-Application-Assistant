@@ -17,6 +17,7 @@ import type {
   NextStepResponse,
   OpportunitySummary,
   OpportunityWithPreps,
+  RegenerateResearchResponse,
 } from "@/types";
 
 export default function App() {
@@ -127,6 +128,17 @@ export default function App() {
     setActiveOpportunity(data.opportunity as OpportunityWithPreps);
   };
 
+  const handleRegenerateResearch = async () => {
+    if (!activeOpportunity) return;
+    const res = await fetch(`/api/opportunities/${activeOpportunity.id}/regenerate-research`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to regenerate company research.");
+    const { opportunity } = data as RegenerateResearchResponse;
+    setActiveOpportunity(opportunity);
+  };
+
   const handleOpenOpportunity = async (id: string) => {
     const res = await fetch(`/api/opportunities/${id}`);
     const data = await res.json();
@@ -155,6 +167,7 @@ export default function App() {
           onGenerateFirstPrep={handleGenerateFirstPrep}
           onUpdateAppliedDate={handleUpdateAppliedDate}
           onUpdateAdditionalContext={handleUpdateAdditionalContext}
+          onRegenerateResearch={handleRegenerateResearch}
           onBack={() => setActiveOpportunity(null)}
         />
       ) : view === "new" ? (

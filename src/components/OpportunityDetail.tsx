@@ -15,6 +15,7 @@ interface OpportunityDetailProps {
   onGenerateFirstPrep: (input: FirstPrepRequest) => Promise<void>;
   onUpdateAppliedDate: (appliedDate: string | null) => Promise<void>;
   onUpdateAdditionalContext: (additionalContext: string | null) => Promise<void>;
+  onRegenerateResearch: () => Promise<void>;
   onBack: () => void;
 }
 
@@ -32,6 +33,7 @@ export function OpportunityDetail({
   onGenerateFirstPrep,
   onUpdateAppliedDate,
   onUpdateAdditionalContext,
+  onRegenerateResearch,
   onBack,
 }: OpportunityDetailProps) {
   const preps = opportunity.preps; // already reverse-chronological from the API
@@ -117,7 +119,7 @@ export function OpportunityDetail({
         </div>
       </div>
 
-      <CompanySnapshot research={opportunity.companyResearch} />
+      <CompanySnapshot research={opportunity.companyResearch} onRegenerate={onRegenerateResearch} />
 
       <OpportunityContext value={opportunity.additionalContext} onSave={onUpdateAdditionalContext} />
 
