@@ -20,6 +20,39 @@ import type {
   RegenerateResearchResponse,
 } from "@/types";
 
+// Shared by every flow that triggers Call 1 from the client (New
+// Opportunity step 2, Log Applied's "add JD & generate" step 1, and the
+// Company Snapshot Regenerate button) — runs research for an opportunity
+// that already exists and returns it with research applied. The 65s abort
+// timeout surfaces a stalled request as a visible error instead of an
+// indefinite silent hang (see the maxDuration=60 fix on the server side —
+// this is set just above that so the server's own limit fires first when
+// that's the actual cause).
+async function runResearch(opportunityId: string): Promise<OpportunityWithPreps> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 65000);
+  let res: Response;
+  try {
+    res = await fetch(`/api/opportunities/${opportunityId}/regenerate-research`, {
+      method: "POST",
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(
+        "Researching the company timed out after 65s with no response — the request may not be reaching the server, or the research call is taking unusually long."
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to research the company.");
+  return (data as RegenerateResearchResponse).opportunity;
+}
+
 export default function App() {
   const [view, setView] = useState<View>("new");
   const [archive, setArchive] = useState<OpportunitySummary[]>([]);
@@ -47,17 +80,60 @@ export default function App() {
     if (v === "archive") loadArchive();
   };
 
-  const handleGenerate = async (input: NewPrepInput) => {
-    const res = await fetch("/api/generate", {
+  // Three steps against three separate requests — see /api/generate for
+  // why: research (Call 1) and generation (Call 2) combined in one request
+  // routinely approached Vercel's 60s function duration limit. Step 1
+  // (create) is fast and essentially never fails once validation passes,
+  // so an error there still leaves the user on the form as before. Steps 2
+  // and 3 run against an opportunity that now already exists in the
+  // database — if either fails, that's surfaced explicitly and the user is
+  // taken to the (now real) opportunity's Detail page to retry from there,
+  // rather than left looking at a blank form with no sign anything happened.
+  const handleGenerate = async (input: NewPrepInput, onStage: (stage: string) => void) => {
+    onStage("Creating opportunity…");
+    const createRes = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        applicantName: input.applicantName,
+        company: input.company,
+        role: input.role,
+        jdText: input.jdText,
+        appliedDate: input.appliedDate,
+        additionalContext: input.additionalContext,
+      }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Generation failed.");
+    const createData = await createRes.json();
+    if (!createRes.ok) throw new Error(createData.error || "Failed to create the opportunity.");
+    const { opportunity } = createData as GenerateResponse;
+    // Reassigned as each step succeeds, so the catch block below can fall
+    // back to whatever's actually persisted so far (e.g. research having
+    // completed even if generation then fails) instead of the stale,
+    // pre-research object from step 1.
+    let latestOpportunity = opportunity;
 
-    const { opportunity, prep } = data as GenerateResponse;
-    setActiveOpportunity({ ...opportunity, preps: [prep] });
+    try {
+      onStage("Researching company…");
+      latestOpportunity = await runResearch(opportunity.id);
+
+      onStage("Generating prep…");
+      const prepRes = await fetch(`/api/opportunities/${opportunity.id}/first-prep`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jdText: input.jdText, resumeText: input.resumeText }),
+      });
+      const prepData = await prepRes.json();
+      if (!prepRes.ok) throw new Error(prepData.error || "Generation failed.");
+
+      const { opportunity: finalOpportunity, prep } = prepData as FirstPrepResponse;
+      setActiveOpportunity({ ...finalOpportunity, preps: [prep] });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Generation failed.";
+      window.alert(
+        `"${opportunity.role} – ${opportunity.company}" was created, but generating its prep failed: ${message}\n\nYou can retry from its Opportunity Detail page.`
+      );
+      setActiveOpportunity({ ...latestOpportunity, preps: [] });
+    }
   };
 
   const handleLogApplied = async (input: LogAppliedRequest) => {
@@ -74,8 +150,21 @@ export default function App() {
     setActiveOpportunity({ ...opportunity, preps: [] });
   };
 
-  const handleGenerateFirstPrep = async (input: FirstPrepRequest) => {
+  // Same split as New Opportunity (see handleGenerate) — research, then
+  // generation, as two requests instead of one. Skips the research step
+  // entirely if this opportunity already has cached research (e.g. a
+  // retry after generation failed last time but research had already
+  // succeeded) rather than needlessly re-running Call 1.
+  const handleGenerateFirstPrep = async (input: FirstPrepRequest, onStage: (stage: string) => void) => {
     if (!activeOpportunity) return;
+
+    if (!activeOpportunity.companyResearch) {
+      onStage("Researching company…");
+      const researched = await runResearch(activeOpportunity.id);
+      setActiveOpportunity((current) => (current ? { ...researched, preps: current.preps } : researched));
+    }
+
+    onStage("Generating prep…");
     const res = await fetch(`/api/opportunities/${activeOpportunity.id}/first-prep`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -130,36 +219,7 @@ export default function App() {
 
   const handleRegenerateResearch = async () => {
     if (!activeOpportunity) return;
-
-    // Diagnostic: without this, a stalled request just leaves the button
-    // stuck on "Regenerating…" indefinitely with no visible error —
-    // exactly the symptom this is meant to surface instead. Distinguishes
-    // "we gave up waiting" from a real server-side error response. Set
-    // above the route's own maxDuration=60s (see regenerate-research/
-    // route.ts) so the server's own limit fires first when that's the
-    // actual cause, rather than this racing it and winning by 5s.
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 65000);
-    let res: Response;
-    try {
-      res = await fetch(`/api/opportunities/${activeOpportunity.id}/regenerate-research`, {
-        method: "POST",
-        signal: controller.signal,
-      });
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        throw new Error(
-          "Regenerate timed out after 65s with no response — the request may not be reaching the server, or the research call is taking unusually long."
-        );
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeoutId);
-    }
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to regenerate company research.");
-    const { opportunity } = data as RegenerateResearchResponse;
+    const opportunity = await runResearch(activeOpportunity.id);
     setActiveOpportunity(opportunity);
   };
 

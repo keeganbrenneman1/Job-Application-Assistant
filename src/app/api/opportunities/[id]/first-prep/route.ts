@@ -11,13 +11,18 @@ export const maxDuration = 60;
 
 const FIRST_STAGE = "recruiter_screen" as const;
 
-// Completes a "Log Applied" quick-added opportunity: supplies the JD +
-// resume that the "New Opportunity" path collects upfront, and generates
-// the Recruiter Screen prep for it — same Call 1 + Call 2 shape as
-// /api/generate, just against an opportunity record that already exists
-// instead of creating a new one. Only valid while the opportunity still
-// has zero stage-preps; once it has one, /api/opportunities/[id]/next-step
-// is the route for stage 2.
+// Completes a "Log Applied" quick-added opportunity (or the tail end of
+// "New Opportunity", once its research step has already run — see
+// /api/generate): generates the Recruiter Screen prep for an opportunity
+// record that already exists. Reuses cached research when present
+// (existingResearch below) rather than assuming there is none — Call 1's
+// multi-round web-search loop plus Call 2 combined can approach Vercel's
+// function duration limit, so callers are expected to run research as its
+// own prior step (POST .../regenerate-research) whenever possible, letting
+// this route do Call 2 only. Falls back to running Call 1 itself if no
+// research is cached yet, so it still works standalone. Only valid while
+// the opportunity still has zero stage-preps; once it has one,
+// /api/opportunities/[id]/next-step is the route for stage 2.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -47,13 +52,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const stageLabel = stageLabelFor(FIRST_STAGE);
-    const { content, research, source } = await generatePrep({
+    const { content, research, researchIsFresh, source } = await generatePrep({
       stageType: FIRST_STAGE,
       stageLabel,
       company: opportunity.company,
       role: opportunity.role,
       jdText: jdText.trim(),
-      existingResearch: null,
+      existingResearch: opportunity.companyResearch,
       resumeText: resumeText.trim(),
       priorStage: null,
       additionalContext: null,
@@ -62,7 +67,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
 
     await setOpportunityJdText(opportunity.id, jdText.trim());
-    await setOpportunityResearch(opportunity.id, research);
+    if (researchIsFresh) await setOpportunityResearch(opportunity.id, research);
     const prep = await addStagePrep(opportunity.id, FIRST_STAGE, stageLabel, content, null, null, source);
 
     const response: FirstPrepResponse = {

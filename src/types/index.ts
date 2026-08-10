@@ -279,6 +279,9 @@ export interface OpportunitySummary extends Opportunity {
   latestInterviewerTitle: string | null;
 }
 
+// The New Opportunity form's full input — resumeText is collected here but
+// not sent to POST /api/generate (see that route and GenerateResponse
+// below); it stays client-side until step 3 (POST .../first-prep) needs it.
 export interface GenerateRequest {
   applicantName: string;
   company: string;
@@ -286,19 +289,20 @@ export interface GenerateRequest {
   jdText: string;
   resumeText: string;
   appliedDate?: string; // "YYYY-MM-DD"; the New Opportunity form defaults this to today, editable
-  // Optional v3 opportunity-level context, supplied up front. The New
-  // Opportunity flow creates the opportunity and its Recruiter Screen prep
-  // in one call, so unlike the "Log Applied" path (where this field is
-  // added later via the Opportunity Detail page, after the record already
-  // exists), there's no opportunity to attach it to until this request
-  // finishes — so it has to travel in on the request itself rather than
-  // being read back off an existing record.
+  // Optional v3 opportunity-level context, supplied up front. Unlike the
+  // "Log Applied" path (where this field is added later via the
+  // Opportunity Detail page, after the record already exists), New
+  // Opportunity has no existing record to attach it to until this request
+  // finishes creating one — so it has to travel in on the request itself
+  // rather than being read back off an existing record.
   additionalContext?: string;
 }
 
+// New Opportunity step 1 of 3 (creation only — see POST /api/generate).
+// No `prep` here: unlike the old one-shot shape, generation happens in two
+// later steps (POST .../regenerate-research, then POST .../first-prep).
 export interface GenerateResponse {
   opportunity: Opportunity;
-  prep: StagePrep;
 }
 
 export interface NextStepRequest {
@@ -339,7 +343,13 @@ export interface FirstPrepRequest {
   resumeText: string;
 }
 
-export type FirstPrepResponse = GenerateResponse; // same {opportunity, prep} shape
+// No longer an alias of GenerateResponse — that type dropped `prep` when
+// /api/generate stopped generating inline (see GenerateResponse above).
+// first-prep still runs Call 2 itself and still returns a real prep.
+export interface FirstPrepResponse {
+  opportunity: Opportunity;
+  prep: StagePrep;
+}
 
 // Manual "Regenerate" action on the Company Snapshot block: re-runs Call 1
 // only and overwrites the opportunity's cached research. Opportunity-level

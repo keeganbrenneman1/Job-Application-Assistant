@@ -7,7 +7,10 @@ import { ResumeInputField } from "@/components/ResumeInputField";
 import type { FirstPrepRequest } from "@/types";
 
 export interface FirstPrepFormProps {
-  onGenerate: (input: FirstPrepRequest) => Promise<void>;
+  // onStage reports progress — this now runs research and generation as
+  // two separate requests (see src/app/page.tsx's handleGenerateFirstPrep)
+  // rather than one combined call.
+  onGenerate: (input: FirstPrepRequest, onStage: (stage: string) => void) => Promise<void>;
 }
 
 // Completes a "Log Applied" quick-added opportunity: company/role/
@@ -19,6 +22,7 @@ export function FirstPrepForm({ onGenerate }: FirstPrepFormProps) {
   const [jd, setJd] = useState("");
   const [resume, setResume] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [stage, setStage] = useState("Working…");
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit = jd.trim() && resume.trim() && !generating;
@@ -28,7 +32,7 @@ export function FirstPrepForm({ onGenerate }: FirstPrepFormProps) {
     setGenerating(true);
     setError(null);
     try {
-      await onGenerate({ jdText: jd, resumeText: resume });
+      await onGenerate({ jdText: jd, resumeText: resume }, setStage);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed.");
     } finally {
@@ -69,7 +73,7 @@ export function FirstPrepForm({ onGenerate }: FirstPrepFormProps) {
           opacity: canSubmit ? 1 : 0.5,
         }}
       >
-        {generating ? "Researching & generating…" : "Generate prep doc"}
+        {generating ? stage : "Generate prep doc"}
       </button>
     </div>
   );
