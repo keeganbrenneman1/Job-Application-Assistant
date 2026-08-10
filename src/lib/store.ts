@@ -67,6 +67,7 @@ export async function createOpportunity(
     jdText,
     companyResearch: null,
     appliedDate,
+    additionalContext: null,
     createdAt: new Date().toISOString(),
   };
   memoryDB().opportunities.unshift(opportunity);
@@ -112,6 +113,28 @@ export async function setOpportunityAppliedDate(
 
   const opportunity = memoryDB().opportunities.find((o) => o.id === opportunityId);
   if (opportunity) opportunity.appliedDate = appliedDate;
+}
+
+// v3: persistent opportunity-wide running note, editable in place from the
+// Opportunity Detail page. Distinct from a stage prep's `additionalContext`
+// (one-shot, set at generation time and never edited afterward) — this one
+// is updated directly, independent of any generation call.
+export async function setOpportunityAdditionalContext(
+  opportunityId: string,
+  additionalContext: string | null
+): Promise<void> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ additional_context: additionalContext })
+      .eq("id", opportunityId);
+    if (error) throw new Error(`setOpportunityAdditionalContext: ${error.message}`);
+    return;
+  }
+
+  const opportunity = memoryDB().opportunities.find((o) => o.id === opportunityId);
+  if (opportunity) opportunity.additionalContext = additionalContext;
 }
 
 // Call 1's research result, persisted once and reused for every later
@@ -284,6 +307,7 @@ function rowToOpportunity(row: any): Opportunity {
     jdText: row.jd_text,
     companyResearch: row.company_research ?? null,
     appliedDate: row.applied_date ?? null,
+    additionalContext: row.additional_context ?? null,
     createdAt: row.created_at,
   };
 }

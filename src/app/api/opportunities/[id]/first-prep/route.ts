@@ -54,6 +54,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       resumeText: resumeText.trim(),
       priorStage: null,
       additionalContext: null,
+      opportunityAdditionalContext: opportunity.additionalContext,
       interviewerTitle: null,
     });
 

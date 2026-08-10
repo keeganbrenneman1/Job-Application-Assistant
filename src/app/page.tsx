@@ -115,6 +115,18 @@ export default function App() {
     setActiveOpportunity(data.opportunity as OpportunityWithPreps);
   };
 
+  const handleUpdateAdditionalContext = async (additionalContext: string | null) => {
+    if (!activeOpportunity) return;
+    const res = await fetch(`/api/opportunities/${activeOpportunity.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ additionalContext }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to update additional context.");
+    setActiveOpportunity(data.opportunity as OpportunityWithPreps);
+  };
+
   const handleOpenOpportunity = async (id: string) => {
     const res = await fetch(`/api/opportunities/${id}`);
     const data = await res.json();
@@ -142,6 +154,7 @@ export default function App() {
           onGenerateNextStep={handleGenerateNextStep}
           onGenerateFirstPrep={handleGenerateFirstPrep}
           onUpdateAppliedDate={handleUpdateAppliedDate}
+          onUpdateAdditionalContext={handleUpdateAdditionalContext}
           onBack={() => setActiveOpportunity(null)}
         />
       ) : view === "new" ? (
