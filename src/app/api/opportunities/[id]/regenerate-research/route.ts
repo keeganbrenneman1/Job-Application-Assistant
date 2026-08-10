@@ -14,6 +14,11 @@ export const runtime = "nodejs";
 // regenerate — see RegenerateResearchResponse in src/types/index.ts.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // Diagnostic only: confirms the invocation actually reached this
+  // function (as opposed to being dropped/blocked before reaching Vercel,
+  // or hanging silently inside the Claude call below with nothing else in
+  // this route logged until the catch block).
+  console.log(`[regenerate-research] request received for opportunity ${id}`);
 
   try {
     const opportunity = await getOpportunity(id);

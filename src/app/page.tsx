@@ -130,9 +130,30 @@ export default function App() {
 
   const handleRegenerateResearch = async () => {
     if (!activeOpportunity) return;
-    const res = await fetch(`/api/opportunities/${activeOpportunity.id}/regenerate-research`, {
-      method: "POST",
-    });
+
+    // Diagnostic: without this, a stalled request just leaves the button
+    // stuck on "Regenerating…" indefinitely with no visible error —
+    // exactly the symptom this is meant to surface instead. Distinguishes
+    // "we gave up waiting" from a real server-side error response.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000);
+    let res: Response;
+    try {
+      res = await fetch(`/api/opportunities/${activeOpportunity.id}/regenerate-research`, {
+        method: "POST",
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw new Error(
+          "Regenerate timed out after 55s with no response — the request may not be reaching the server, or the research call is taking unusually long."
+        );
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to regenerate company research.");
     const { opportunity } = data as RegenerateResearchResponse;
