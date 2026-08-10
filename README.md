@@ -5,6 +5,18 @@ and current company information, across the whole interview pipeline. Built for
 personal use (Keegan + spouse) during an active job search, and as a portfolio piece
 demonstrating a hybrid grounded-generation architecture (deterministic extraction + live
 search-grounded research + separate reasoning call). Note: Focused on the steps following securing an initial interview right now.
+## What it does (v3)
+Adds one persistent, opportunity-level free-text context field on top of v2 —
+separate from each stage's one-shot additional-context field and separate
+from the resume/JD. It behaves like a running note: opens pre-filled with
+whatever's already saved on the Opportunity Detail page (collapsible,
+alongside the Company Snapshot block and stage-prep feed), the user
+edits/appends in place, and it's never blank if content already exists.
+Included as-is (no summarization, no extra Claude call) in every future
+stage generation for that opportunity when non-empty — e.g. an
+interviewer's email contents, notes on how a prior session actually went,
+org-structure detail learned outside the app.
+
 ## What it does (v2)
 Paste or upload a resume and a job description (text or URL) to generate a Recruiter
 Screen prep doc: company snapshot, fit talking points, likely questions, questions to
@@ -27,10 +39,11 @@ Next.js (App Router, TypeScript, Tailwind) app implementing the v2 architecture 
 Claude pipeline (grounded research once per opportunity, then stage-aware reasoning-only
 generation per stage) behind a single swappable mock/live function, and Supabase-backed
 opportunity/stage-prep storage with an in-memory fallback for local dev before a
-Supabase project is wired up. Not yet deployed or run against a live Claude API key.
+Supabase project is wired up — plus v3's persistent opportunity-level context field
+(`additional_context` on `opportunities`), folded into Call 2's prompt whenever present,
+no new Claude call. Not yet deployed or run against a live Claude API key.
 
 ## What's not built yet
-- **v3:** one persistent, opportunity-level free-text context field (not stage-scoped) that feeds every future generation for that opportunity. Additive on top of v2's existing per-stage additional-context field, not a replacement. Examples: interviewer email contents, notes on how a prior session actually went.
 - **v4:** remove the 2-stage cap — reuse the "next step" option as many times as necessary. Uses context of all prior stages (plural), not just the last one, when creating prep content for the current stage. (Mechanism: rolling summary, rewritten after each stage generation, stored on the opportunity — not full raw text per prior stage.)
 - **v-next:**
   - Stage-specific context (later refinement — likely unifying v2's per-stage field and v3's opportunity-level field, e.g. tagging opportunity-level context as stage-specific when needed; not fully resolved)

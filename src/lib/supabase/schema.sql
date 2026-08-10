@@ -31,6 +31,14 @@
 --   this field. Nullable specifically so existing pre-this-field
 --   opportunities can be backfilled after the fact from the Opportunity
 --   Detail page rather than needing a forced default.
+--
+-- v3 changes from v2:
+-- - `opportunities` gain `additional_context` (nullable text) — a single
+--   persistent, opportunity-wide running note (not a log/entries table),
+--   editable in place from the Opportunity Detail page and included as-is
+--   in every future Call 2 for that opportunity when non-empty. Distinct
+--   from `preps.additional_context`, which stays a one-shot field scoped
+--   to a single stage's generation — both exist simultaneously.
 
 create extension if not exists "pgcrypto";
 
@@ -42,6 +50,7 @@ create table if not exists opportunities (
   jd_text text not null default '',
   company_research jsonb,
   applied_date date, -- nullable: unset for a "Log Applied" quick-add until the user sets it, or for pre-existing opportunities until backfilled
+  additional_context text, -- v3: persistent opportunity-wide running note, distinct from preps.additional_context's per-stage one-shot field
   created_at timestamptz not null default now()
 );
 
@@ -175,6 +184,13 @@ begin
     where table_name = 'preps' and column_name = 'research'
   ) then
     alter table preps drop column research;
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns
+    where table_name = 'opportunities' and column_name = 'additional_context'
+  ) then
+    alter table opportunities add column additional_context text;
   end if;
 
   -- Unconditional refresh, not just "add if missing": an earlier version

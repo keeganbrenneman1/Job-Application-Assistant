@@ -67,6 +67,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       resumeText: resumeText?.trim() || null,
       priorStage: { stageLabel: priorPrep.stageLabel, content: priorPrep.content },
       additionalContext: additionalContext?.trim() || null,
+      opportunityAdditionalContext: opportunity.additionalContext,
       interviewerTitle: interviewerTitle?.trim() || null,
     });
 

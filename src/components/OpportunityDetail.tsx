@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { theme, serifFont, sansFont } from "@/lib/theme";
 import { CompanySnapshot } from "@/components/CompanySnapshot";
+import { OpportunityContext } from "@/components/OpportunityContext";
 import { StagePrepCard } from "@/components/StagePrepCard";
 import { NextStepForm } from "@/components/NextStepForm";
 import { FirstPrepForm } from "@/components/FirstPrepForm";
@@ -13,6 +14,7 @@ interface OpportunityDetailProps {
   onGenerateNextStep: (input: NextStepRequest) => Promise<void>;
   onGenerateFirstPrep: (input: FirstPrepRequest) => Promise<void>;
   onUpdateAppliedDate: (appliedDate: string | null) => Promise<void>;
+  onUpdateAdditionalContext: (additionalContext: string | null) => Promise<void>;
   onBack: () => void;
 }
 
@@ -29,6 +31,7 @@ export function OpportunityDetail({
   onGenerateNextStep,
   onGenerateFirstPrep,
   onUpdateAppliedDate,
+  onUpdateAdditionalContext,
   onBack,
 }: OpportunityDetailProps) {
   const preps = opportunity.preps; // already reverse-chronological from the API
@@ -115,6 +118,8 @@ export function OpportunityDetail({
       </div>
 
       <CompanySnapshot research={opportunity.companyResearch} />
+
+      <OpportunityContext value={opportunity.additionalContext} onSave={onUpdateAdditionalContext} />
 
       {preps.length === 0 ? (
         <div>

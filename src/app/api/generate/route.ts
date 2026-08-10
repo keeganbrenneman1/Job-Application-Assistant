@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       resumeText: resumeText.trim(),
       priorStage: null,
       additionalContext: null,
+      opportunityAdditionalContext: null, // no opportunity exists yet at this point — v3's field is set afterward, from the Opportunity Detail page
       interviewerTitle: null,
     });
 

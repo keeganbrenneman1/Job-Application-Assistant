@@ -248,6 +248,11 @@ export interface Opportunity {
   jdText: string;
   companyResearch: CompanyResearch | null;
   appliedDate: string | null; // "YYYY-MM-DD"; null until set — quick-added opportunities and pre-this-field ones start null
+  // v3: persistent, opportunity-wide running note — separate from each
+  // stage prep's one-shot `additionalContext`. Editable in place from the
+  // Opportunity Detail page; included as-is in every future Call 2 for
+  // this opportunity when non-empty. Not a log/entries table by design.
+  additionalContext: string | null;
   createdAt: string;
 }
 
