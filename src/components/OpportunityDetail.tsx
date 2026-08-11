@@ -20,6 +20,11 @@ interface OpportunityDetailProps {
   onUpdateAppliedDate: (appliedDate: string | null) => Promise<void>;
   onUpdateAdditionalContext: (additionalContext: string | null) => Promise<void>;
   onRegenerateResearch: () => Promise<void>;
+  // v4: appends one entry to a stage's context log (see ContextLog on
+  // StagePrepCard) — only the opportunity's most-recently-created stage
+  // accepts new entries, enforced both here (isOpenStage below) and again
+  // server-side.
+  onAddContextEntry: (stageId: string, body: string) => Promise<void>;
   onBack: () => void;
 }
 
@@ -38,6 +43,7 @@ export function OpportunityDetail({
   onUpdateAppliedDate,
   onUpdateAdditionalContext,
   onRegenerateResearch,
+  onAddContextEntry,
   onBack,
 }: OpportunityDetailProps) {
   const preps = opportunity.preps; // already reverse-chronological from the API
@@ -143,6 +149,8 @@ export function OpportunityDetail({
                 prep={prep}
                 expanded={expandedId === prep.id}
                 onToggle={() => setExpandedId((current) => (current === prep.id ? null : prep.id))}
+                isOpenStage={prep.id === preps[0]?.id}
+                onAddContextEntry={(body) => onAddContextEntry(prep.id, body)}
               />
             ))}
           </div>

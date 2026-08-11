@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { getSupabase } from "@/lib/supabase/client";
 import type {
   CompanyResearch,
+  ContextEntry,
   Opportunity,
   OpportunitySummary,
   OpportunityWithPreps,
@@ -20,13 +21,14 @@ import type {
 interface MemoryDB {
   opportunities: Opportunity[];
   preps: StagePrep[];
+  contextEntries: ContextEntry[];
 }
 
 const globalForMemory = globalThis as unknown as { __jaaMemoryDB?: MemoryDB };
 
 function memoryDB(): MemoryDB {
   if (!globalForMemory.__jaaMemoryDB) {
-    globalForMemory.__jaaMemoryDB = { opportunities: [], preps: [] };
+    globalForMemory.__jaaMemoryDB = { opportunities: [], preps: [], contextEntries: [] };
   }
   return globalForMemory.__jaaMemoryDB;
 }
@@ -189,7 +191,7 @@ export async function addStagePrep(
       .select()
       .single();
     if (error) throw new Error(`addStagePrep: ${error.message}`);
-    return rowToPrep(data);
+    return rowToPrep(data, []);
   }
 
   const prep: StagePrep = {
@@ -199,12 +201,39 @@ export async function addStagePrep(
     stageLabel,
     content,
     additionalContext,
+    contextEntries: [],
     interviewerTitle,
     source,
     createdAt: new Date().toISOString(),
   };
   memoryDB().preps.unshift(prep);
   return prep;
+}
+
+// v4: appends one entry to a stage's context log. Callers are responsible
+// for enforcing the "only the most-recently-created stage accepts new
+// entries" rule (see the context-entries route) — this function itself
+// just inserts, same division of responsibility as the rest of store.ts.
+export async function addContextEntry(stageId: string, body: string): Promise<ContextEntry> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("context_entries")
+      .insert({ stage_id: stageId, body })
+      .select()
+      .single();
+    if (error) throw new Error(`addContextEntry: ${error.message}`);
+    return rowToContextEntry(data);
+  }
+
+  const entry: ContextEntry = {
+    id: randomUUID(),
+    stageId,
+    body,
+    createdAt: new Date().toISOString(),
+  };
+  memoryDB().contextEntries.push(entry);
+  return entry;
 }
 
 // Shared across both users by design (see spec: a named 2-person tool, not
@@ -291,14 +320,40 @@ export async function getOpportunity(id: string): Promise<OpportunityWithPreps |
       .order("created_at", { ascending: false });
     if (prepError) throw new Error(`getOpportunity preps: ${prepError.message}`);
 
-    return { ...rowToOpportunity(oppRow), preps: (prepRows ?? []).map(rowToPrep) };
+    const prepIds = (prepRows ?? []).map((row) => row.id);
+    const entriesByStage = new Map<string, ContextEntry[]>();
+    if (prepIds.length > 0) {
+      const { data: entryRows, error: entryError } = await supabase
+        .from("context_entries")
+        .select("*")
+        .in("stage_id", prepIds)
+        .order("created_at", { ascending: true });
+      if (entryError) throw new Error(`getOpportunity context entries: ${entryError.message}`);
+      for (const row of entryRows ?? []) {
+        const entry = rowToContextEntry(row);
+        const list = entriesByStage.get(entry.stageId) ?? [];
+        list.push(entry);
+        entriesByStage.set(entry.stageId, list);
+      }
+    }
+
+    return {
+      ...rowToOpportunity(oppRow),
+      preps: (prepRows ?? []).map((row) => rowToPrep(row, entriesByStage.get(row.id) ?? [])),
+    };
   }
 
   const opportunity = memoryDB().opportunities.find((o) => o.id === id);
   if (!opportunity) return null;
   const preps = memoryDB()
     .preps.filter((p) => p.opportunityId === id)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((p) => ({
+      ...p,
+      contextEntries: memoryDB()
+        .contextEntries.filter((e) => e.stageId === p.id)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    }));
   return { ...opportunity, preps };
 }
 
@@ -318,7 +373,7 @@ function rowToOpportunity(row: any): Opportunity {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rowToPrep(row: any): StagePrep {
+function rowToPrep(row: any, contextEntries: ContextEntry[]): StagePrep {
   return {
     id: row.id,
     opportunityId: row.opportunity_id,
@@ -326,8 +381,19 @@ function rowToPrep(row: any): StagePrep {
     stageLabel: row.stage_label,
     content: row.content,
     additionalContext: row.additional_context ?? null,
+    contextEntries,
     interviewerTitle: row.interviewer_title ?? null,
     source: row.source,
+    createdAt: row.created_at,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToContextEntry(row: any): ContextEntry {
+  return {
+    id: row.id,
+    stageId: row.stage_id,
+    body: row.body,
     createdAt: row.created_at,
   };
 }

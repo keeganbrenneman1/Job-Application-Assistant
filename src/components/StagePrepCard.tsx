@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { theme, serifFont, sansFont } from "@/lib/theme";
+import { ContextLog } from "@/components/ContextLog";
 import { STAGE_SECTIONS } from "@/types";
 import type { StagePrep } from "@/types";
 
@@ -10,6 +11,10 @@ interface StagePrepCardProps {
   prep: StagePrep;
   expanded: boolean;
   onToggle: () => void;
+  // v4: true while this is the opportunity's most-recently-created stage —
+  // controls whether ContextLog accepts new entries below.
+  isOpenStage: boolean;
+  onAddContextEntry: (body: string) => Promise<void>;
 }
 
 // One stage-prep in the reverse-chronological feed. `expanded` controls
@@ -17,7 +22,7 @@ interface StagePrepCardProps {
 // to a single header row (prior stages) — toggling never triggers a new
 // API call, the prep's content is already loaded (see spec "Review
 // without regeneration").
-export function StagePrepCard({ prep, expanded, onToggle }: StagePrepCardProps) {
+export function StagePrepCard({ prep, expanded, onToggle, isOpenStage, onAddContextEntry }: StagePrepCardProps) {
   const sections = STAGE_SECTIONS[prep.stageType];
   const [openSection, setOpenSection] = useState<string | null>(sections[0]?.key ?? null);
   const date = new Date(prep.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -82,6 +87,8 @@ export function StagePrepCard({ prep, expanded, onToggle }: StagePrepCardProps) 
           Context supplied for this stage: {prep.additionalContext}
         </div>
       )}
+
+      <ContextLog entries={prep.contextEntries} open={isOpenStage} onAdd={onAddContextEntry} />
 
       <div>
         {sections.map((s, i) => {

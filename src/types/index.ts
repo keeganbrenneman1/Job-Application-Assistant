@@ -256,13 +256,32 @@ export interface Opportunity {
   createdAt: string;
 }
 
+// v4: one entry in a stage's append-only context log (see StagePrep.contextEntries
+// and PriorStageContext in src/lib/ai/generate.ts). No edit/delete surfaced
+// by the app — additive only.
+export interface ContextEntry {
+  id: string;
+  stageId: string; // the StagePrep this entry belongs to
+  body: string;
+  createdAt: string;
+}
+
 export interface StagePrep {
   id: string;
   opportunityId: string;
   stageType: StageType;
   stageLabel: string; // resolved display label (custom text for "other", else the stock label)
   content: StageContent;
+  // Pre-v4 one-shot field, set at generation time (v2/v3). No longer
+  // written by any code path as of v4 — ContextEntry/contextEntries below
+  // replaces it going forward — but left populated on older rows so they
+  // keep displaying (see StagePrepCard).
   additionalContext: string | null;
+  // v4: this stage's append-only context log, oldest first. Open (new
+  // entries addable) while this is the opportunity's most-recently-created
+  // stage; once a following stage exists, it's read-only history — its
+  // full contents already fed that next stage's generation.
+  contextEntries: ContextEntry[];
   interviewerTitle: string | null; // e.g. "CTO", "Senior Engineering Manager" — short, user-entered, not researched
   source: "live" | "mock";
   createdAt: string;
@@ -309,8 +328,11 @@ export interface NextStepRequest {
   stageType: StageType;
   stageLabel?: string; // required (non-empty) when stageType === "other"
   resumeText?: string;
-  additionalContext?: string;
-  interviewerTitle?: string; // e.g. "CTO" — referenced explicitly in the Call 2 prompt, not folded into additionalContext
+  // No stage-specific additionalContext field here as of v4 — the prior
+  // stage's context log (see ContextEntry) fills that role now, read
+  // server-side from the prior stage's own record rather than supplied on
+  // this request.
+  interviewerTitle?: string; // e.g. "CTO" — referenced explicitly in the Call 2 prompt, not folded into additional context
 }
 
 export interface NextStepResponse {
@@ -356,5 +378,17 @@ export interface FirstPrepResponse {
 // and Call-1-only by design — distinct from a possible future "re-request
 // prep doc" action (Call 2 only, per-stage, not built — see README v-next).
 export interface RegenerateResearchResponse {
+  opportunity: OpportunityWithPreps;
+}
+
+// v4: appends one entry to a stage's context log (POST
+// .../preps/[prepId]/context-entries). Only valid while that stage is the
+// opportunity's most-recently-created one — see that route for the
+// "closed" rejection once a following stage exists.
+export interface AddContextEntryRequest {
+  body: string;
+}
+
+export interface AddContextEntryResponse {
   opportunity: OpportunityWithPreps;
 }

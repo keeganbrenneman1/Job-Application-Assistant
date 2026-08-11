@@ -39,6 +39,18 @@
 --   in every future Call 2 for that opportunity when non-empty. Distinct
 --   from `preps.additional_context`, which stays a one-shot field scoped
 --   to a single stage's generation — both exist simultaneously.
+--
+-- v4 changes from v3:
+-- - New `context_entries` table, keyed to a stage (`preps.id`), not new
+--   columns on `preps`. Replaces `preps.additional_context` as a
+--   pre-generation input going forward: a stage's log opens when that
+--   stage is created and stays open — new entries addable any time — until
+--   Generate Next Step creates the following stage, at which point the
+--   full log feeds that next stage's generation (see PriorStageContext in
+--   src/lib/ai/generate.ts). `preps.additional_context` itself is left in
+--   place, unwritten by any new code path, purely so pre-v4 rows that
+--   already have a value keep displaying it. Opportunity-level
+--   `additional_context` (v3, above) is untouched by this.
 
 create extension if not exists "pgcrypto";
 
@@ -73,6 +85,20 @@ create table if not exists preps (
 );
 
 create index if not exists preps_opportunity_idx on preps (opportunity_id, created_at desc);
+
+-- v4: append-only context log for a single stage. A row here is one entry
+-- (pre-interview note, live note, post-call debrief, a later invite email,
+-- etc.) added while `stage_id`'s stage is "open" — i.e. the most recently
+-- created stage for its opportunity. No edit/delete surfaced by the app:
+-- additive only, matching the log's own "never rewrites history" premise.
+create table if not exists context_entries (
+  id uuid primary key default gen_random_uuid(),
+  stage_id uuid not null references preps (id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists context_entries_stage_idx on context_entries (stage_id, created_at asc);
 
 -- Optional (per spec, "not required"): short-lived company research cache
 -- shared across both users, keyed by a normalized company name. Distinct
