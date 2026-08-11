@@ -4,6 +4,11 @@
 Faster, tailored interview prep grounded in the real job description, the candidate's resume, and current company information — starting with the recruiter screen stage.
 
 ## v1 / v2 / v3 / v4 / v-next
+> Numbering below is superseded — v3 and v4 as actually built don't match this list
+> (the "freeform manual context" feature described as v4 here shipped as v3; cap
+> removal described as v3 here is v5 in the current roadmap). This section is kept
+> for history; `README.md`'s "What's not built yet" is the current source of truth
+> for what's next.
 - **v1:** recruiter screen only. Static prep doc output. JD + resume + lightweight live company research. No login, no picker — applicant name entered as a per-opportunity field.
 - **v2:** add a single "next step" option after the Recruiter Screen prep — one additional stage, hard capped at 2 stages total per opportunity. Uses the context of the immediately preceding stage only (no accumulation across more than one hop). Asks for the interviewer’s title to use as context
 - **v3:** remove the v2 cap — reuse the "next step" option as many times as necessary. Uses context of all prior stages (plural), not just the last one, when creating prep content for the current stage
