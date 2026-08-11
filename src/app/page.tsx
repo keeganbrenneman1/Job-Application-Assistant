@@ -217,6 +217,21 @@ export default function App() {
     setActiveOpportunity(data.opportunity as OpportunityWithPreps);
   };
 
+  // v4: appends one entry to stageId's context log. Only the opportunity's
+  // most-recently-created stage accepts this (enforced server-side too) —
+  // see ContextLog on StagePrepCard.
+  const handleAddContextEntry = async (stageId: string, body: string) => {
+    if (!activeOpportunity) return;
+    const res = await fetch(`/api/opportunities/${activeOpportunity.id}/preps/${stageId}/context-entries`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to add context entry.");
+    setActiveOpportunity(data.opportunity as OpportunityWithPreps);
+  };
+
   const handleRegenerateResearch = async () => {
     if (!activeOpportunity) return;
     const opportunity = await runResearch(activeOpportunity.id);
@@ -252,6 +267,7 @@ export default function App() {
           onUpdateAppliedDate={handleUpdateAppliedDate}
           onUpdateAdditionalContext={handleUpdateAdditionalContext}
           onRegenerateResearch={handleRegenerateResearch}
+          onAddContextEntry={handleAddContextEntry}
           onBack={() => setActiveOpportunity(null)}
         />
       ) : view === "new" ? (

@@ -43,7 +43,7 @@ Rules:
 - Never produce a "Company" or company-snapshot section, under any header — that's handled separately and shown once per opportunity, not per stage.
 - Ground every claim in what you were actually given (JD, research, resume if present, prior-stage content if present, additional context if present) — no invented specifics.
 - Where a section calls for likely questions or topics, give short frameworks for answering, not scripted answers or solved problems.
-${interviewerTitle ? `- The interviewer's title (${interviewerTitle}) is a real input to your reasoning, not a decorative header — let it actively shape multiple sections, not just get name-checked once:\n  - Likely questions/topics: weight these toward what someone in that specific position actually probes for. A senior/strategic title (e.g. a CTO, a VP) tends to probe strategy, tradeoffs, and judgment; an IC-level or hands-on title tends to probe implementation detail and day-to-day execution. Don't give the same generic question list regardless of who's asking.\n  - Fit/role-fit content: emphasize the parts of the candidate's background most relevant to that specific person's vantage point, not a generic JD-wide fit that would read identically for any interviewer.\n  - Questions to ask: make these specific to what's genuinely worth asking someone in that exact position — not interchangeable with what you'd ask anyone else in the room.\n` : ""}- If additional context was supplied for this stage, let it visibly shape the output rather than treating it as decoration.
+${interviewerTitle ? `- The interviewer's title (${interviewerTitle}) is a real input to your reasoning, not a decorative header — let it actively shape multiple sections, not just get name-checked once:\n  - Likely questions/topics: weight these toward what someone in that specific position actually probes for. A senior/strategic title (e.g. a CTO, a VP) tends to probe strategy, tradeoffs, and judgment; an IC-level or hands-on title tends to probe implementation detail and day-to-day execution. Don't give the same generic question list regardless of who's asking.\n  - Fit/role-fit content: emphasize the parts of the candidate's background most relevant to that specific person's vantage point, not a generic JD-wide fit that would read identically for any interviewer.\n  - Questions to ask: make these specific to what's genuinely worth asking someone in that exact position — not interchangeable with what you'd ask anyone else in the room.\n` : ""}- If a context log from the prior stage was supplied, let it visibly shape the output rather than treating it as decoration — it may include pre-interview notes, live notes taken during that stage, a post-call debrief, or an invite email confirming this next stage.
 - If opportunity-level context was supplied (a persistent running note the candidate has kept for this opportunity across stages — separate from this stage's own additional context), treat it as a real input too: it may include things like interviewer email contents, notes on how a prior session actually went, or org-structure detail learned outside the app. Let it shape the output wherever relevant.
 - If prior-stage content was supplied, stay visibly continuous with it — no contradictions if placed side by side.
 - Keep each section to 2-5 sentences, written for someone scanning right before this stage.
@@ -56,6 +56,11 @@ ${headerList}`;
 export interface PriorStageContext {
   stageLabel: string;
   content: StageContent;
+  // v4: the immediately preceding stage's append-only context log, oldest
+  // first — every entry added while that stage was open. Feeds this
+  // generation call in place of v2's one-shot per-stage `additionalContext`
+  // field, which this replaces (see README's v4 entry).
+  contextLog: { body: string; createdAt: string }[];
 }
 
 export async function generateStagePrepContent(params: {
@@ -67,11 +72,9 @@ export async function generateStagePrepContent(params: {
   research: CompanyResearch;
   resumeText: string | null;
   priorStage: PriorStageContext | null;
-  additionalContext: string | null;
-  // v3: persistent, opportunity-wide running note (distinct from the
-  // stage-specific `additionalContext` above) — included as-is when
+  // v3: persistent, opportunity-wide running note — included as-is when
   // present, alongside the JD, cached research, prior-stage content,
-  // stage-specific additional context, and interviewer title.
+  // prior-stage context log, and interviewer title.
   opportunityAdditionalContext: string | null;
   interviewerTitle: string | null;
 }): Promise<StageContent> {
@@ -84,7 +87,6 @@ export async function generateStagePrepContent(params: {
     research,
     resumeText,
     priorStage,
-    additionalContext,
     opportunityAdditionalContext,
     interviewerTitle,
   } = params;
@@ -123,6 +125,20 @@ export async function generateStagePrepContent(params: {
       `--- PRIOR STAGE: ${priorStage.stageLabel} ---`,
       JSON.stringify(priorStage.content, null, 2)
     );
+
+    if (priorStage.contextLog.length > 0) {
+      const formattedEntries = priorStage.contextLog
+        .map(
+          (entry) =>
+            `[${new Date(entry.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}] ${entry.body}`
+        )
+        .join("\n\n");
+      parts.push(
+        ``,
+        `--- CONTEXT LOG FROM ${priorStage.stageLabel} (entries added after that stage's prep was generated, in order) ---`,
+        formattedEntries
+      );
+    }
   }
 
   if (opportunityAdditionalContext?.trim()) {
@@ -131,10 +147,6 @@ export async function generateStagePrepContent(params: {
       `--- OPPORTUNITY-LEVEL CONTEXT (persistent running note kept across all stages) ---`,
       opportunityAdditionalContext.trim()
     );
-  }
-
-  if (additionalContext?.trim()) {
-    parts.push(``, `--- ADDITIONAL CONTEXT FOR THIS STAGE ---`, additionalContext.trim());
   }
 
   const message = await anthropic.messages.create({

@@ -24,7 +24,6 @@ export interface GeneratePrepParams {
   existingResearch: CompanyResearch | null;
   resumeText: string | null;
   priorStage: PriorStageContext | null;
-  additionalContext: string | null;
   opportunityAdditionalContext: string | null;
   interviewerTitle: string | null;
 }
@@ -53,7 +52,6 @@ export async function generatePrep(params: GeneratePrepParams): Promise<Generate
     existingResearch,
     resumeText,
     priorStage,
-    additionalContext,
     opportunityAdditionalContext,
     interviewerTitle,
   } = params;
@@ -77,7 +75,6 @@ export async function generatePrep(params: GeneratePrepParams): Promise<Generate
     research,
     resumeText,
     priorStage,
-    additionalContext,
     opportunityAdditionalContext,
     interviewerTitle,
   });

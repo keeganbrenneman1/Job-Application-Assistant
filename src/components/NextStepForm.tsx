@@ -15,14 +15,15 @@ export interface NextStepFormProps {
 }
 
 // Generate Next Step form (see spec "v2 flow" step 4): stage type dropdown,
-// optional additional-context free text, optional resume, JD reused
-// read-only from the opportunity — no re-entry required.
+// optional resume, JD reused read-only from the opportunity — no re-entry
+// required. No "additional context" field here as of v4 — that role is now
+// filled by the prior stage's context log (see ContextLog on
+// StagePrepCard), which the next-step API reads server-side.
 export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps) {
   const [stageType, setStageType] = useState<StageType>(NEXT_STEP_STAGE_TYPES[0].id);
   const [customLabel, setCustomLabel] = useState("");
   const [interviewerTitle, setInterviewerTitle] = useState("");
   const [jdExpanded, setJdExpanded] = useState(false);
-  const [additionalContext, setAdditionalContext] = useState("");
   const [resume, setResume] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +40,6 @@ export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps
         stageType,
         stageLabel: needsCustomLabel ? customLabel.trim() : undefined,
         resumeText: resume.trim() || undefined,
-        additionalContext: additionalContext.trim() || undefined,
         interviewerTitle: interviewerTitle.trim() || undefined,
       });
     } catch (err) {
@@ -125,23 +125,6 @@ export function NextStepForm({ jdText, onGenerate, onCancel }: NextStepFormProps
             style={{ ...inputStyle, opacity: 0.7, borderColor: theme.rule }}
           />
         )}
-      </div>
-
-      <div>
-        <label className={labelClass} style={labelStyle}>
-          Additional context <span style={{ opacity: 0.6 }}>(optional)</span>
-        </label>
-        <p className="text-[11px] mb-1.5" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
-          E.g. paste the interview-invite email — helps ground this stage in reality, not generic assumptions.
-        </p>
-        <textarea
-          value={additionalContext}
-          onChange={(e) => setAdditionalContext(e.target.value)}
-          placeholder="Anything specific to this stage"
-          rows={3}
-          className="w-full px-3 py-2.5 text-sm outline-none"
-          style={inputStyle}
-        />
       </div>
 
       <ResumeInputField

@@ -5,6 +5,22 @@ and current company information, across the whole interview pipeline. Built for
 personal use (Keegan + spouse) during an active job search, and as a portfolio piece
 demonstrating a hybrid grounded-generation architecture (deterministic extraction + live
 search-grounded research + separate reasoning call). Note: Focused on the steps following securing an initial interview right now.
+## What it does (v4)
+Replaces v2's one-shot per-stage additional-context field with an append-only
+context log, per stage. A stage's log opens the moment that stage is created
+and stays open — new entries addable any time, RSS-style — until Generate
+Next Step creates the following stage. You can log pre-interview notes and
+questions, live notes, a post-call debrief, and eventually the invite email
+confirming the next round, all in the same log; once the next stage is
+generated, the full log from the stage that just closed is what feeds that
+next stage's prep (in place of v2's field). Shown inline on each stage's
+card in the Opportunity Detail feed — the open (most recently created)
+stage shows an add-entry box beneath its existing entries; every earlier
+stage's log is read-only, since its contents already fed the next
+generation. No edit/delete — additive only. v3's opportunity-level
+Additional Context field is unaffected: still separate, always-editable,
+with no automatic relationship to stage logs.
+
 ## What it does (v3)
 Adds one persistent, opportunity-level free-text context field on top of v2 —
 separate from each stage's one-shot additional-context field and separate
@@ -53,14 +69,15 @@ opportunity/stage-prep storage with an in-memory fallback for local dev before a
 Supabase project is wired up — plus v3's persistent opportunity-level context field
 (`additional_context` on `opportunities`), folded into Call 2's prompt whenever present,
 no new Claude call — plus a manual Company Snapshot regenerate action (re-runs Call 1,
-overwrites the opportunity's cached research). Not yet deployed or run against a live
-Claude API key.
+overwrites the opportunity's cached research) — plus v4's per-stage append-only context
+log (`context_entries`, keyed to a stage prep), whose full contents replace v2's one-shot
+per-stage field as input to the next stage's generation. Not yet deployed or run against
+a live Claude API key.
 
 ## What's not built yet
-Starting v4 or v5? Read `V3_HANDOFF.md` first — session notes on what shipped, the
+Starting v5? Read `V3_HANDOFF.md` first — session notes on what shipped, the
 decisions behind it that aren't visible from the code alone, and constraints this
 next phase needs to respect.
-- **v4:** Stage-specific context (replaces v2’s per-stage field) Per-stage context becomes an append-only log rather than a one-shot pre-generation input. A stage’s log opens when that stage is created and stays open — editable by adding new entries, RSS-style — until the next stage begins (i.e., until Generate Next Step creates the following stage record). You can add entries before, during, or after the interview: pre-interview notes and questions, live notes, post-call debrief, and eventually the invite email confirming the next round — all land in the same log for that stage. When the next stage is generated, the full log from the previous stage is what feeds its prep, replacing v2’s single stage-specific field. Opportunity-wide context (v3) is unaffected — still a separate, always-editable, always-incorporated field, with no automatic relationship to stage logs. (Not fully scoped: data model is a context_entries table keyed to a stage, not new columns; no UI timeline required despite that being the mental model used to reason about it; no mechanism needed for moving/promoting entries between stage and opportunity level — that’s a human judgment call about where to type something, not a feature.)
 - **v5:** remove the 2-stage cap — reuse the "next step" option as many times as necessary. Uses context of all prior stages (plural), not just the last one, when creating prep content for the current stage. (Mechanism: rolling summary, rewritten after each stage generation, stored on the opportunity — not full raw text per prior stage.)
 - **v-next:**
     -  “Re-request” prep doc: regenerate a single stage prep in place (Call 2 only) so it picks up context backfilled after the fact — an interview-invite email pasted in later, a correction to the interviewer's title, an edit to v3's opportunity-level context field. Originally scoped to cover two cases together (a lost/malformed company snapshot AND backfilled context); the first case is now handled separately by the Company Snapshot **Regenerate** action above, so this item is now Call 2/per-stage only. Kept as its own item rather than folded into that action: different call (Call 2 vs Call 1), different scope (one stage vs the whole opportunity), and bundling them would mean every stage regen silently re-runs research too, which contradicts the v2 spec's firm requirement that research is cached once per opportunity and reused across stages, not re-run per stage.

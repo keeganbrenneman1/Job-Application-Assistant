@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { stageType, stageLabel, resumeText, additionalContext, interviewerTitle } = body;
+  const { stageType, stageLabel, resumeText, interviewerTitle } = body;
 
   if (!stageType || !VALID_STAGE_TYPES.includes(stageType as StageType)) {
     return NextResponse.json(
@@ -61,6 +61,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const priorPrep = opportunity.preps[0];
     const resolvedStageLabel = stageLabelFor(stageType as StageType, stageLabel);
 
+    // v4: the prior stage's full context log feeds this generation,
+    // replacing v2's one-shot per-stage additionalContext request field —
+    // see PriorStageContext in src/lib/ai/generate.ts.
     const { content, research, researchIsFresh, source } = await generatePrep({
       stageType: stageType as StageType,
       stageLabel: resolvedStageLabel,
@@ -69,8 +72,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       jdText: opportunity.jdText,
       existingResearch: opportunity.companyResearch,
       resumeText: resumeText?.trim() || null,
-      priorStage: { stageLabel: priorPrep.stageLabel, content: priorPrep.content },
-      additionalContext: additionalContext?.trim() || null,
+      priorStage: {
+        stageLabel: priorPrep.stageLabel,
+        content: priorPrep.content,
+        contextLog: priorPrep.contextEntries.map((entry) => ({
+          body: entry.body,
+          createdAt: entry.createdAt,
+        })),
+      },
       opportunityAdditionalContext: opportunity.additionalContext,
       interviewerTitle: interviewerTitle?.trim() || null,
     });
@@ -84,7 +93,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       stageType as StageType,
       resolvedStageLabel,
       content,
-      additionalContext?.trim() || null,
+      null,
       interviewerTitle?.trim() || null,
       source
     );
