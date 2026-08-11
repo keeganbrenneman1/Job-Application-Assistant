@@ -241,7 +241,10 @@ export default function App() {
   const handleOpenOpportunity = async (id: string) => {
     const res = await fetch(`/api/opportunities/${id}`);
     const data = await res.json();
-    if (!res.ok) return;
+    if (!res.ok) {
+      window.alert(data.error || "Failed to open opportunity.");
+      return;
+    }
     setActiveOpportunity(data.opportunity as OpportunityWithPreps);
   };
 
