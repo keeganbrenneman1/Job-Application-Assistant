@@ -46,7 +46,7 @@ Resume is never persisted, at any stage; only the generated prep docs (and the J
 are saved.
 ## Status
 Next.js (App Router, TypeScript, Tailwind) app implementing the v2 architecture from
-`JOB APPLICATION ASSISTANT SPEC_0808.md`: deterministic resume/JD extraction, a
+`JOB APPLICATION ASSISTANT SPEC_1008.md`: deterministic resume/JD extraction, a
 Claude pipeline (grounded research once per opportunity, then stage-aware reasoning-only
 generation per stage) behind a single swappable mock/live function, and Supabase-backed
 opportunity/stage-prep storage with an in-memory fallback for local dev before a
@@ -57,6 +57,9 @@ overwrites the opportunity's cached research). Not yet deployed or run against a
 Claude API key.
 
 ## What's not built yet
+Starting v4 or v5? Read `V3_HANDOFF.md` first — session notes on what shipped, the
+decisions behind it that aren't visible from the code alone, and constraints this
+next phase needs to respect.
 - **v4:** Stage-specific context (replaces v2’s per-stage field) Per-stage context becomes an append-only log rather than a one-shot pre-generation input. A stage’s log opens when that stage is created and stays open — editable by adding new entries, RSS-style — until the next stage begins (i.e., until Generate Next Step creates the following stage record). You can add entries before, during, or after the interview: pre-interview notes and questions, live notes, post-call debrief, and eventually the invite email confirming the next round — all land in the same log for that stage. When the next stage is generated, the full log from the previous stage is what feeds its prep, replacing v2’s single stage-specific field. Opportunity-wide context (v3) is unaffected — still a separate, always-editable, always-incorporated field, with no automatic relationship to stage logs. (Not fully scoped: data model is a context_entries table keyed to a stage, not new columns; no UI timeline required despite that being the mental model used to reason about it; no mechanism needed for moving/promoting entries between stage and opportunity level — that’s a human judgment call about where to type something, not a feature.)
 - **v5:** remove the 2-stage cap — reuse the "next step" option as many times as necessary. Uses context of all prior stages (plural), not just the last one, when creating prep content for the current stage. (Mechanism: rolling summary, rewritten after each stage generation, stored on the opportunity — not full raw text per prior stage.)
 - **v-next:**
@@ -95,7 +98,7 @@ to enable real persistence. Use the "Load sample JD + resume" link on the New Pr
 for a cold-start demo without a real resume on hand.
 
 ## Process
-Built using a spec-first, prototype-before-code process — see `JOB APPLICATION ASSISTANT SPEC_0808.md`
-(v2) and `JOB APPLICATION ASSISTANT SPEC.md` (v1) for the locked architecture decisions,
-and `.claude /agents/` for the review checklists (spec-critic, eng-architecture-reviewer,
-qa-smoke-test) used during build.
+Built using a spec-first, prototype-before-code process — see `JOB APPLICATION ASSISTANT SPEC_1008.md`
+(v2, supersedes the earlier `SPEC_0808.md` draft) and `JOB APPLICATION ASSISTANT SPEC.md` (v1) for the
+locked architecture decisions, and `.claude /agents/` for the review checklists (spec-critic,
+eng-architecture-reviewer, qa-smoke-test) used during build.
