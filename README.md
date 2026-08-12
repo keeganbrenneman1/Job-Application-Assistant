@@ -5,6 +5,25 @@ and current company information, across the whole interview pipeline. Built for
 personal use (Keegan + spouse) during an active job search, and as a portfolio piece
 demonstrating a hybrid grounded-generation architecture (deterministic extraction + live
 search-grounded research + separate reasoning call). Note: Focused on the steps following securing an initial interview right now.
+## What it does (v5)
+Removes v2's hard cap of 2 total stage-preps per opportunity. "Generate Next
+Step" is now available after any stage, not just the first — sequential
+stages can be added indefinitely (Recruiter Screen → Technical → Panel →
+Reference Check → ..., as many hops as the interview process actually has).
+
+Deliberately **not** what the original spec's v3/v5 numbering describes for
+this: there's no rolling-summary mechanism, and no accumulation of context
+across more than one hop. Each stage's generation still uses exactly what
+v2/v4 already used for the 1-to-2 case — the immediately preceding stage's
+generated content plus its context log (v4) — simply repeated for stage 3,
+4, 5, and so on, rather than the full history of every prior stage. This
+was an explicit scoping decision for this session, not an oversight: it
+avoids the context/cost ballooning a naive "pass every prior stage" version
+would cause, without yet building the rolling-summary mechanism the
+original spec called for. A future phase revisiting multi-hop context
+accumulation should treat that as new scope, not assume this session built
+toward it.
+
 ## What it does (v4)
 Replaces v2's one-shot per-stage additional-context field with an append-only
 context log, per stage. A stage's log opens the moment that stage is created
@@ -71,14 +90,16 @@ Supabase project is wired up — plus v3's persistent opportunity-level context 
 no new Claude call — plus a manual Company Snapshot regenerate action (re-runs Call 1,
 overwrites the opportunity's cached research) — plus v4's per-stage append-only context
 log (`context_entries`, keyed to a stage prep), whose full contents replace v2's one-shot
-per-stage field as input to the next stage's generation. Not yet deployed or run against
-a live Claude API key.
+per-stage field as input to the next stage's generation — plus v5's removal of the
+2-stage cap (unlimited sequential stages; context per generation still single-hop only,
+see "What it does (v5)"). Not yet deployed or run against a live Claude API key.
 
 ## What's not built yet
-Starting v5? Read `V3_HANDOFF.md` first — session notes on what shipped, the
-decisions behind it that aren't visible from the code alone, and constraints this
-next phase needs to respect.
-- **v5:** remove the 2-stage cap — reuse the "next step" option as many times as necessary. Uses context of all prior stages (plural), not just the last one, when creating prep content for the current stage. (Mechanism: rolling summary, rewritten after each stage generation, stored on the opportunity — not full raw text per prior stage.)
+Read `V3_HANDOFF.md` for session notes on v3/v4 — decisions behind them that aren't
+visible from the code alone, and constraints future work should respect. Multi-hop
+context accumulation (a rolling summary across all prior stages, not just the
+immediately preceding one) remains unbuilt — see "What it does (v5)" above for why
+that was deliberately deferred rather than built this session.
 - **v-next:**
     -  “Re-request” prep doc: regenerate a single stage prep in place (Call 2 only) so it picks up context backfilled after the fact — an interview-invite email pasted in later, a correction to the interviewer's title, an edit to v3's opportunity-level context field. Originally scoped to cover two cases together (a lost/malformed company snapshot AND backfilled context); the first case is now handled separately by the Company Snapshot **Regenerate** action above, so this item is now Call 2/per-stage only. Kept as its own item rather than folded into that action: different call (Call 2 vs Call 1), different scope (one stage vs the whole opportunity), and bundling them would mean every stage regen silently re-runs research too, which contradicts the v2 spec's firm requirement that research is cached once per opportunity and reused across stages, not re-run per stage.
   - Resume optimization to extend into the pre-interview part of the job application lifecycle

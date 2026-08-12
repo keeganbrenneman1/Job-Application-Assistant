@@ -7,9 +7,12 @@ export const runtime = "nodejs";
 // v4: appends one entry to a stage's context log (see README's v4 entry +
 // ContextEntry in src/types). A stage's log is "open" only while it's the
 // opportunity's most-recently-created stage — enforced here regardless of
-// what the client sends, same pattern as next-step/route.ts's 2-stage cap
-// check. Once a following stage exists, the prior stage's log is closed;
-// its full contents already fed that next stage's generation.
+// what the client sends, same defensive re-check-server-side pattern used
+// throughout this API (e.g. next-step/route.ts's own state validation).
+// Once a following stage exists, the prior stage's log is closed; its full
+// contents already fed that next stage's generation. Holds unchanged as of
+// v5 — unlimited sequential stages doesn't change what "open" means, only
+// how many times a stage can stop being the newest one.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string; prepId: string }> }

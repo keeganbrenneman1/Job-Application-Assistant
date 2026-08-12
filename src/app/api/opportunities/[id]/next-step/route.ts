@@ -6,18 +6,24 @@ import type { NextStepRequest, NextStepResponse, StageType } from "@/types";
 
 export const runtime = "nodejs";
 // See src/app/api/generate/route.ts for why this is set — same Call 1
-// latency risk applies here (research is cached by v2's stage-2 cap, but
-// Call 2 itself can still run long).
+// latency risk applies here (research is cached once an opportunity has
+// its first stage-prep, but Call 2 itself can still run long).
 export const maxDuration = 60;
 
 // recruiter_screen deliberately excluded — it's v1's implicit first stage,
 // created at opportunity creation and never re-selectable as a next step.
 const VALID_STAGE_TYPES = NEXT_STEP_STAGE_TYPES.map((s) => s.id);
 
-// v2's "Generate Next Step" — see spec "v2 flow" step 4. Hard capped at 2
-// total stage-preps per opportunity for v2 (only appears in the UI when
-// exactly 1 exists; enforced here too so the cap holds regardless of what
-// the client sends). Reuses the opportunity's persisted jdText and cached
+// "Generate Next Step" — see spec "v2 flow" step 4. v2's hard cap of 2
+// total stage-preps per opportunity is gone as of v5: this route now
+// accepts any opportunity with at least one existing stage-prep, however
+// many it already has. Context-wise nothing changes stage over stage —
+// `priorPrep` below is always just "whatever the most recently created
+// prep is," the same single immediately-preceding-stage content + context
+// log (v4) it already used for the 1-to-2 transition, simply repeated.
+// Deliberately no accumulation across more than one hop and no rolling
+// summary — see README's v5 entry for why that's a scoping decision, not
+// an oversight. Reuses the opportunity's persisted jdText and cached
 // company research — Call 1 does not run again here.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -46,14 +52,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!opportunity) {
       return NextResponse.json({ error: "Opportunity not found." }, { status: 404 });
     }
-    if (opportunity.preps.length !== 1) {
+    if (opportunity.preps.length === 0) {
       return NextResponse.json(
-        {
-          error:
-            opportunity.preps.length === 0
-              ? "This opportunity has no prep yet — generate the first stage before a next step."
-              : "This opportunity already has 2 stages, the v2 cap. v3 removes this limit.",
-        },
+        { error: "This opportunity has no prep yet — generate the first stage before a next step." },
         { status: 400 }
       );
     }
