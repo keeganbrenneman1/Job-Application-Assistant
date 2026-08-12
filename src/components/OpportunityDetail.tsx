@@ -31,11 +31,12 @@ interface OpportunityDetailProps {
 // Opportunity Detail page (see spec "v2 flow" step 3 + "Output — prep doc
 // sections" Layout): Company Snapshot (collapsible, collapsed by default)
 // above a reverse-chronological stage-prep feed — newest expanded, prior
-// collapsed to a header — with "Generate Next Step" shown only while
-// exactly 1 stage-prep exists (v2's hard cap of 2 total). An opportunity
-// created via "Log Applied" starts with zero preps; this page shows
-// FirstPrepForm in that case instead of an empty feed, so JD/resume can be
-// added and the Recruiter Screen prep generated once a screen is scheduled.
+// collapsed to a header — with "Generate Next Step" shown whenever at
+// least one stage-prep exists (v2's hard cap of 2 total is gone as of v5 —
+// unlimited sequential stages). An opportunity created via "Log Applied"
+// starts with zero preps; this page shows FirstPrepForm in that case
+// instead of an empty feed, so JD/resume can be added and the Recruiter
+// Screen prep generated once a screen is scheduled.
 export function OpportunityDetail({
   opportunity,
   onGenerateNextStep,
@@ -62,7 +63,9 @@ export function OpportunityDetail({
     setExpandedId(preps[0]?.id ?? null);
   }
 
-  const canGenerateNextStep = preps.length === 1;
+  // v5: no upper bound — any opportunity with at least one stage-prep can
+  // generate another.
+  const canGenerateNextStep = preps.length >= 1;
 
   const handleGenerateNextStep = async (input: NextStepRequest) => {
     await onGenerateNextStep(input);
