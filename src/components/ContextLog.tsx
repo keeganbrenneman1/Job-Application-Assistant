@@ -69,7 +69,12 @@ export function ContextLog({ entries, open, onAdd }: ContextLogProps) {
           {entries.map((entry) => (
             <div key={entry.id} className="text-sm leading-snug" style={{ fontFamily: sansFont, color: theme.paper }}>
               <span className="text-[11px] mr-1.5" style={{ color: theme.signal }}>
-                {new Date(entry.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                {new Date(entry.createdAt).toLocaleString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
               </span>
               <span style={{ opacity: 0.92 }}>{entry.body}</span>
             </div>

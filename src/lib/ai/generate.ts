@@ -130,7 +130,12 @@ export async function generateStagePrepContent(params: {
       const formattedEntries = priorStage.contextLog
         .map(
           (entry) =>
-            `[${new Date(entry.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}] ${entry.body}`
+            `[${new Date(entry.createdAt).toLocaleString(undefined, {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}] ${entry.body}`
         )
         .join("\n\n");
       parts.push(
