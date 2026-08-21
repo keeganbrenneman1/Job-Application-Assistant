@@ -18,7 +18,8 @@ function buildSystemPrompt(
   sections: StageSectionDef[],
   hasResume: boolean,
   hasPriorStage: boolean,
-  interviewerTitle: string | null
+  interviewerTitle: string | null,
+  hasOwnContextLog: boolean
 ): string {
   const headerList = sections.map((s) => `## ${s.label}`).join("\n");
   const sectionGuidance = sections.map((s) => `- "${s.label}": ${s.subtext}.`).join("\n");
@@ -44,6 +45,7 @@ Rules:
 - Ground every claim in what you were actually given (JD, research, resume if present, prior-stage content if present, additional context if present) — no invented specifics.
 - Where a section calls for likely questions or topics, give short frameworks for answering, not scripted answers or solved problems.
 ${interviewerTitle ? `- The interviewer's title (${interviewerTitle}) is a real input to your reasoning, not a decorative header — let it actively shape multiple sections, not just get name-checked once:\n  - Likely questions/topics: weight these toward what someone in that specific position actually probes for. A senior/strategic title (e.g. a CTO, a VP) tends to probe strategy, tradeoffs, and judgment; an IC-level or hands-on title tends to probe implementation detail and day-to-day execution. Don't give the same generic question list regardless of who's asking.\n  - Fit/role-fit content: emphasize the parts of the candidate's background most relevant to that specific person's vantage point, not a generic JD-wide fit that would read identically for any interviewer.\n  - Questions to ask: make these specific to what's genuinely worth asking someone in that exact position — not interchangeable with what you'd ask anyone else in the room.\n` : ""}- If a context log from the prior stage was supplied, let it visibly shape the output rather than treating it as decoration — it may include pre-interview notes, live notes taken during that stage, a post-call debrief, or an invite email confirming this next stage.
+${hasOwnContextLog ? `- This is a full regeneration of an existing prep doc for THIS stage, and a context log entered for this exact stage after its original generation was supplied below — corrections, clarifications, or additional notes (e.g. "these are my direct reports, not peers"). Treat these entries as authoritative: let each one visibly reshape every section it bears on, not just get appended as a footnote. Where an entry corrects something you'd otherwise infer differently from the JD/research/prior-stage content, follow the correction consistently throughout the whole doc, not just in the section where it first came up.\n` : ""}
 - If opportunity-level context was supplied (a persistent running note the candidate has kept for this opportunity across stages — separate from this stage's own additional context), treat it as a real input too: it may include things like interviewer email contents, notes on how a prior session actually went, or org-structure detail learned outside the app. Let it shape the output wherever relevant.
 - If prior-stage content was supplied, stay visibly continuous with it — no contradictions if placed side by side.
 - Keep each section to 2-5 sentences, written for someone scanning right before this stage.
@@ -63,6 +65,20 @@ export interface PriorStageContext {
   contextLog: { body: string; createdAt: string }[];
 }
 
+function formatContextLog(entries: { body: string; createdAt: string }[]): string {
+  return entries
+    .map(
+      (entry) =>
+        `[${new Date(entry.createdAt).toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        })}] ${entry.body}`
+    )
+    .join("\n\n");
+}
+
 export async function generateStagePrepContent(params: {
   stageLabel: string;
   sections: StageSectionDef[];
@@ -77,6 +93,14 @@ export async function generateStagePrepContent(params: {
   // prior-stage context log, and interviewer title.
   opportunityAdditionalContext: string | null;
   interviewerTitle: string | null;
+  // v6: this stage's OWN append-only context log, oldest first — distinct
+  // from `priorStage.contextLog` (the stage before this one). Null for a
+  // normal (first-time) generation, since a stage has no log entries yet
+  // when it's first created. Populated only by the "Regenerate" trigger,
+  // which reruns this call in place for a stage that already has a prep,
+  // picking up whatever corrections/clarifications were logged for it
+  // since — see the .../preps/[prepId]/regenerate route.
+  ownContextLog: { body: string; createdAt: string }[] | null;
 }): Promise<StageContent> {
   const {
     stageLabel,
@@ -89,6 +113,7 @@ export async function generateStagePrepContent(params: {
     priorStage,
     opportunityAdditionalContext,
     interviewerTitle,
+    ownContextLog,
   } = params;
 
   const anthropic = getAnthropic();
@@ -97,7 +122,8 @@ export async function generateStagePrepContent(params: {
     sections,
     Boolean(resumeText),
     Boolean(priorStage),
-    interviewerTitle
+    interviewerTitle,
+    Boolean(ownContextLog && ownContextLog.length > 0)
   );
 
   const parts = [
@@ -127,23 +153,20 @@ export async function generateStagePrepContent(params: {
     );
 
     if (priorStage.contextLog.length > 0) {
-      const formattedEntries = priorStage.contextLog
-        .map(
-          (entry) =>
-            `[${new Date(entry.createdAt).toLocaleString(undefined, {
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })}] ${entry.body}`
-        )
-        .join("\n\n");
       parts.push(
         ``,
         `--- CONTEXT LOG FROM ${priorStage.stageLabel} (entries added after that stage's prep was generated, in order) ---`,
-        formattedEntries
+        formatContextLog(priorStage.contextLog)
       );
     }
+  }
+
+  if (ownContextLog && ownContextLog.length > 0) {
+    parts.push(
+      ``,
+      `--- CONTEXT LOG FOR THIS STAGE (${stageLabel}) — logged after this doc's original generation; regenerate incorporating these as corrections/clarifications, in order ---`,
+      formatContextLog(ownContextLog)
+    );
   }
 
   if (opportunityAdditionalContext?.trim()) {

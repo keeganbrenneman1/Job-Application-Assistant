@@ -25,6 +25,9 @@ interface OpportunityDetailProps {
   // accepts new entries, enforced both here (isOpenStage below) and again
   // server-side.
   onAddContextEntry: (stageId: string, body: string) => Promise<void>;
+  // v6: "Regenerate" trigger — reruns Call 2 for one stage prep in place,
+  // using that stage's own current context log (see StagePrepCard).
+  onRegeneratePrep: (prepId: string) => Promise<void>;
   onBack: () => void;
 }
 
@@ -45,6 +48,7 @@ export function OpportunityDetail({
   onUpdateAdditionalContext,
   onRegenerateResearch,
   onAddContextEntry,
+  onRegeneratePrep,
   onBack,
 }: OpportunityDetailProps) {
   const preps = opportunity.preps; // already reverse-chronological from the API
@@ -154,6 +158,7 @@ export function OpportunityDetail({
                 onToggle={() => setExpandedId((current) => (current === prep.id ? null : prep.id))}
                 isOpenStage={prep.id === preps[0]?.id}
                 onAddContextEntry={(body) => onAddContextEntry(prep.id, body)}
+                onRegenerate={() => onRegeneratePrep(prep.id)}
               />
             ))}
           </div>

@@ -5,6 +5,25 @@ and current company information, across the whole interview pipeline. Built for
 personal use (Keegan + spouse) during an active job search, and as a portfolio piece
 demonstrating a hybrid grounded-generation architecture (deterministic extraction + live
 search-grounded research + separate reasoning call). Note: Focused on the steps following securing an initial interview right now.
+## What it does (v6)
+Adds a **Regenerate** trigger on each stage's prep doc — mostly-absorbed
+"re-request prep doc," per the item this replaces under "What's not built
+yet." Reruns Call 2 in place for that one stage, using the stage's own
+current context log (v4) in full, including any entries logged after the
+doc's original generation — corrections, clarifications, an invite email
+pasted in later. Full-doc regeneration only: the whole prep doc is rewritten
+from scratch with the corrected context, not a targeted rewrite of just one
+section (that's a distinct, backlogged feature — see "What's not built
+yet"). Works on any existing stage prep, whether its own log is still open
+(it's the opportunity's newest stage) or closed (a later stage already
+exists) — regenerating only reads the log, it never writes to it, so it
+doesn't reopen a closed log or add an entry of its own. No new data model:
+corrections live in the same `context_entries` log v4 already built: this
+session only adds the trigger + rerun logic that reads it. Call 2 only,
+same as the rest of the app's per-stage generation — company research stays
+cached and is never re-run by this action (see v3's separate, Call-1-only
+Company Snapshot Regenerate for that).
+
 ## What it does (v5)
 Removes v2's hard cap of 2 total stage-preps per opportunity. "Generate Next
 Step" is now available after any stage, not just the first — sequential
@@ -92,7 +111,9 @@ overwrites the opportunity's cached research) — plus v4's per-stage append-onl
 log (`context_entries`, keyed to a stage prep), whose full contents replace v2's one-shot
 per-stage field as input to the next stage's generation — plus v5's removal of the
 2-stage cap (unlimited sequential stages; context per generation still single-hop only,
-see "What it does (v5)"). Not yet deployed or run against a live Claude API key.
+see "What it does (v5)") — plus v6's per-stage Regenerate trigger (Call 2 only, in
+place, using that stage's own current context log — see "What it does (v6)"). Not yet
+deployed or run against a live Claude API key.
 
 ## What's not built yet
 Read `V3_HANDOFF.md` for session notes on v3/v4 — decisions behind them that aren't
@@ -100,9 +121,6 @@ visible from the code alone, and constraints future work should respect. Multi-h
 context accumulation (a rolling summary across all prior stages, not just the
 immediately preceding one) remains unbuilt — see "What it does (v5)" above for why
 that was deliberately deferred rather than built this session.
-- **v6:**
-- “Re-request” prep doc (mostly absorbed into stage-log work): Not a standalone feature. Once the append-only stage-log exists, this is a “Regenerate” trigger on a stage’s prep doc that reruns Call 2 using the current state of that stage’s log — including any corrections or clarifications added after the original generation (e.g., “these are my direct reports, not peers”). No new data model or storage: the log already carries corrections the same way it carries any other note, and pervasive errors (like a misread relationship) get fixed because they affect the whole doc’s regeneration rather than just one section. The only new build is the trigger + rerun logic itself.
-    regenerate a single stage prep in place (Call 2 only) so it picks up context backfilled after the fact — an interview-invite email pasted in later, a correction to the interviewer's title, an edit to v3's opportunity-level context field. Originally scoped to cover two cases together (a lost/malformed company snapshot AND backfilled context); the first case is now handled separately by the Company Snapshot **Regenerate** action above, so this item is now Call 2/per-stage only. Kept as its own item rather than folded into that action: different call (Call 2 vs Call 1), different scope (one stage vs the whole opportunity), and bundling them would mean every stage regen silently re-runs research too, which contradicts the v2 spec's firm requirement that research is cached once per opportunity and reused across stages, not re-run per stage.
 - **v-next:**
     -  ”Share report” option to create a PDF of an opportunity with each question in each stage expanded. The user can then save and/or download the PDF and share it or bring it to the live interview.
     - “Close Opportunity” marks the end of an interview cycle for a given company/role. Closed opportunities remain fully viewable (all stages, context, and prep history intact) but can no longer advance — no new stages, no Generate Next Step. Status is not a simple open/closed boolean; supports distinct outcome states (e.g., offer, rejected, withdrawn, ghosted/stale) so future dashboard/tracker work can report on outcomes, not just activity. Closing is purely manual — nothing in the app infers or auto-closes based on staleness or time since last stage. No reopen path: closing is treated as effectively permanent, since there’s no legitimate reason to reopen (only mistakes), and a mistaken close requires resubmitting the opportunity from scratch. Given that cost, the close action requires an explicit confirmation step (“This cannot be undone”) baked in from the start, not added later. Not yet scoped: exact status values, where status displays in the opportunities table/list view, whether status is settable independent of closing (e.g., could you mark “offer” without closing) or whether status and closed-state are the same decision made at the same time.
@@ -119,7 +137,7 @@ that was deliberately deferred rather than built this session.
 
 ## Someday, not scoped (fuzzy, no committed version)
 - **Big-picture vision:** extend beyond interview-cycle prep into resume optimization — per-JD tailoring (repurposing Call 1 research + Call 2 fit reasoning, positioned before submission rather than after a screen is scheduled) AND informed by accumulated feedback across opportunities over time. Also wants something useful to come out of failed/closed opportunities specifically — implies an outcome/status field (rejected, no response, withdrawn) the current data model doesn't capture. Depends on the same feedback-attribution question above being resolved first.
-- **Conversational refinement of a prep doc:** after initial generation, a chat-style back-and-forth to react/correct/add context and have the doc evolve — different from v3's one-shot field or the static "re-request prep doc" regenerate (v-next, above). Needs multi-turn conversation storage per stage-prep and a decision on full-doc vs. section-level regeneration per turn.
+- **Conversational refinement of a prep doc:** after initial generation, a chat-style back-and-forth to react/correct/add context and have the doc evolve — different from v3's one-shot field or v6's static, full-doc-only Regenerate trigger (above). Needs multi-turn conversation storage per stage-prep and a decision on full-doc vs. section-level regeneration per turn.
 
 
 ## Stack

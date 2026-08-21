@@ -63,6 +63,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       priorStage: null,
       opportunityAdditionalContext: opportunity.additionalContext,
       interviewerTitle: null,
+      ownContextLog: null,
     });
 
     await setOpportunityJdText(opportunity.id, jdText.trim());
