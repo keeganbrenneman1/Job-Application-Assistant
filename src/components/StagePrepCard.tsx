@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, RefreshCw, Download } from "lucide-react";
 import { theme, serifFont, sansFont } from "@/lib/theme";
 import { ContextLog } from "@/components/ContextLog";
 import { STAGE_SECTIONS } from "@/types";
@@ -126,6 +126,23 @@ export function StagePrepCard({
         className="px-3.5 py-2.5 border-t flex items-center gap-2.5"
         style={{ borderColor: theme.rule }}
       >
+        <a
+          href={`/api/opportunities/${prep.opportunityId}/preps/${prep.id}/export-pdf`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs px-3 py-1.5 tracking-wide flex items-center gap-1.5"
+          style={{
+            background: theme.panelRaised,
+            color: theme.paperMuted,
+            fontFamily: sansFont,
+            fontWeight: 600,
+            border: `1px solid ${theme.rule}`,
+            textDecoration: "none",
+          }}
+        >
+          <Download size={12} />
+          Export to PDF
+        </a>
         <button
           onClick={handleRegenerate}
           disabled={regenerating}
