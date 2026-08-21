@@ -4,7 +4,7 @@
 // Not deterministic (unlike the text extraction itself feeding it) — the
 // caller must always treat the result as an editable suggestion, never
 // auto-locked, since JD formats vary too much to trust blindly (see
-// JOB APPLICATION ASSISTANT SPEC.md "Call 0 — Field extraction"). Best-effort: any
+// JOB_APPLICATION_ASSISTANT_SPEC.md "Call 0 — Field extraction"). Best-effort: any
 // failure here is swallowed and returns nulls rather than blocking the
 // upload, since this is a convenience prefill, not part of the core
 // generation pipeline.
