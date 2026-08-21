@@ -133,8 +133,8 @@ per-stage field as input to the next stage's generation — plus v5's removal of
 see "What it does (v5)") — plus v6's per-stage Regenerate trigger (Call 2 only, in
 place, using that stage's own current context log — see "What it does (v6)") — plus
 v7's per-stage Export to PDF trigger (no Claude call, renders already-generated
-content via `@react-pdf/renderer` — see "What it does (v7)"). Not yet deployed or run
-against a live Claude API key.
+content via `@react-pdf/renderer` — see "What it does (v7)"). Deployed on Vercel
+with a live `ANTHROPIC_API_KEY` — Call 1 and Call 2 run for real, not mocked.
 
 ## What's not built yet
 Read `V3_HANDOFF.md` for session notes on v3/v4 — decisions behind them that aren't
