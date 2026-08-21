@@ -5,6 +5,25 @@ and current company information, across the whole interview pipeline. Built for
 personal use (Keegan + spouse) during an active job search, and as a portfolio piece
 demonstrating a hybrid grounded-generation architecture (deterministic extraction + live
 search-grounded research + separate reasoning call). Note: Focused on the steps following securing an initial interview right now.
+## What it does (v7)
+Adds an **Export to PDF** trigger on each stage's prep doc — a scoped-down
+slice of the "Share report" item under "What's not built yet" below,
+covering just the single-stage case (whole-opportunity export stays
+unbuilt). Renders that one stage's generated content as a standalone,
+presentable PDF, plus the Company Snapshot when — and only when — the stage
+is a Recruiter Screen (every other stage type never shows it in the app
+either, since it's generated once per opportunity, not per stage). No new
+Claude call: this only lays out content that's already been generated and
+persisted, via `@react-pdf/renderer` on the server, using the 14 standard
+PDF fonts so it never depends on fetching a font from the network at render
+time. Deliberately excludes the stage's context log and the opportunity-
+level context field from the export — both are working material that
+already fed Call 2's output, so they're already reflected in what gets
+rendered; repeating them in the PDF would just duplicate content, not add
+information. Downloadable straight from the stage's card as an attachment
+(no page reload, no app state needed to view it) — meant to stand alone
+once out of the app, e.g. handed to a spouse or printed for an interview.
+
 ## What it does (v6)
 Adds a **Regenerate** trigger on each stage's prep doc — mostly-absorbed
 "re-request prep doc," per the item this replaces under "What's not built
@@ -112,8 +131,10 @@ log (`context_entries`, keyed to a stage prep), whose full contents replace v2's
 per-stage field as input to the next stage's generation — plus v5's removal of the
 2-stage cap (unlimited sequential stages; context per generation still single-hop only,
 see "What it does (v5)") — plus v6's per-stage Regenerate trigger (Call 2 only, in
-place, using that stage's own current context log — see "What it does (v6)"). Not yet
-deployed or run against a live Claude API key.
+place, using that stage's own current context log — see "What it does (v6)") — plus
+v7's per-stage Export to PDF trigger (no Claude call, renders already-generated
+content via `@react-pdf/renderer` — see "What it does (v7)"). Not yet deployed or run
+against a live Claude API key.
 
 ## What's not built yet
 Read `V3_HANDOFF.md` for session notes on v3/v4 — decisions behind them that aren't
@@ -122,7 +143,7 @@ context accumulation (a rolling summary across all prior stages, not just the
 immediately preceding one) remains unbuilt — see "What it does (v5)" above for why
 that was deliberately deferred rather than built this session.
 - **v-next:**
-    -  ”Share report” option to create a PDF of an opportunity with each question in each stage expanded. The user can then save and/or download the PDF and share it or bring it to the live interview.
+    -  ”Share report” option to create a PDF of a whole opportunity, all stages combined, with each question in each stage expanded. v7 built the single-stage slice of this (see "What it does (v7)") — the user can already export one stage's prep doc to PDF and share it or bring it to the live interview; what remains here is specifically the whole-opportunity, all-stages-combined version, deliberately not built in that session.
     - “Close Opportunity” marks the end of an interview cycle for a given company/role. Closed opportunities remain fully viewable (all stages, context, and prep history intact) but can no longer advance — no new stages, no Generate Next Step. Status is not a simple open/closed boolean; supports distinct outcome states (e.g., offer, rejected, withdrawn, ghosted/stale) so future dashboard/tracker work can report on outcomes, not just activity. Closing is purely manual — nothing in the app infers or auto-closes based on staleness or time since last stage. No reopen path: closing is treated as effectively permanent, since there’s no legitimate reason to reopen (only mistakes), and a mistaken close requires resubmitting the opportunity from scratch. Given that cost, the close action requires an explicit confirmation step (“This cannot be undone”) baked in from the start, not added later. Not yet scoped: exact status values, where status displays in the opportunities table/list view, whether status is settable independent of closing (e.g., could you mark “offer” without closing) or whether status and closed-state are the same decision made at the same time.
   - Section-level requests for adjusting the prep doc: Targeted correction for narrow errors that don’t warrant regenerating the whole doc — e.g., a wrong-audience question in the logistics section, when the rest of the doc is fine. Requires Call 2 (or a variant of it) to isolate a specific section of its own prior output and rewrite just that part using new feedback, without touching or re-rolling the sections that were already correct. Real added complexity versus full regen: not just “more context, rerun everything,” but “identify a bounded piece of prior output and revise it in place.” Backlogged separately; full regen (above) should be evaluated first via real usage before deciding whether section-level regen is worth building.
   - Resume optimization to extend into the pre-interview part of the job application lifecycle
