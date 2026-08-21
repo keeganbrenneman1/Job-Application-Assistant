@@ -238,6 +238,18 @@ export default function App() {
     setActiveOpportunity(opportunity);
   };
 
+  // v6: reruns Call 2 for one stage prep in place, using that stage's own
+  // current context log — see .../preps/[prepId]/regenerate.
+  const handleRegeneratePrep = async (prepId: string) => {
+    if (!activeOpportunity) return;
+    const res = await fetch(`/api/opportunities/${activeOpportunity.id}/preps/${prepId}/regenerate`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to regenerate prep doc.");
+    setActiveOpportunity(data.opportunity as OpportunityWithPreps);
+  };
+
   const handleOpenOpportunity = async (id: string) => {
     const res = await fetch(`/api/opportunities/${id}`);
     const data = await res.json();
@@ -271,6 +283,7 @@ export default function App() {
           onUpdateAdditionalContext={handleUpdateAdditionalContext}
           onRegenerateResearch={handleRegenerateResearch}
           onAddContextEntry={handleAddContextEntry}
+          onRegeneratePrep={handleRegeneratePrep}
           onBack={() => setActiveOpportunity(null)}
         />
       ) : view === "new" ? (

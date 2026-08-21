@@ -26,6 +26,10 @@ export interface GeneratePrepParams {
   priorStage: PriorStageContext | null;
   opportunityAdditionalContext: string | null;
   interviewerTitle: string | null;
+  // v6: null for a normal generation; the stage's own context log when
+  // called from the "Regenerate" trigger — see generateStagePrepContent's
+  // ownContextLog for what this does to the prompt.
+  ownContextLog: { body: string; createdAt: string }[] | null;
 }
 
 export interface GeneratePrepResult {
@@ -54,6 +58,7 @@ export async function generatePrep(params: GeneratePrepParams): Promise<Generate
     priorStage,
     opportunityAdditionalContext,
     interviewerTitle,
+    ownContextLog,
   } = params;
 
   if (isMockMode()) {
@@ -77,6 +82,7 @@ export async function generatePrep(params: GeneratePrepParams): Promise<Generate
     priorStage,
     opportunityAdditionalContext,
     interviewerTitle,
+    ownContextLog,
   });
 
   return { content, research, researchIsFresh: !existingResearch, source: "live" };

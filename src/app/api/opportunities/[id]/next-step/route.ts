@@ -83,6 +83,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
       opportunityAdditionalContext: opportunity.additionalContext,
       interviewerTitle: interviewerTitle?.trim() || null,
+      ownContextLog: null,
     });
 
     // Defensive only — an opportunity reaching this route should always

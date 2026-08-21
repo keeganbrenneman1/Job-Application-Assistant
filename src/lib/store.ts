@@ -210,6 +210,31 @@ export async function addStagePrep(
   return prep;
 }
 
+// v6: overwrites an existing stage prep's content (and source) in place —
+// used by the "Regenerate" trigger, which reruns Call 2 for a stage using
+// its own current context log (see .../preps/[prepId]/regenerate). Leaves
+// createdAt, additionalContext, interviewerTitle, and contextEntries
+// untouched — this only replaces the generated content itself, same
+// scoping as regenerate-research's overwrite of `company_research`.
+export async function updateStagePrepContent(
+  prepId: string,
+  content: StageContent,
+  source: "live" | "mock"
+): Promise<void> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { error } = await supabase.from("preps").update({ content, source }).eq("id", prepId);
+    if (error) throw new Error(`updateStagePrepContent: ${error.message}`);
+    return;
+  }
+
+  const prep = memoryDB().preps.find((p) => p.id === prepId);
+  if (prep) {
+    prep.content = content;
+    prep.source = source;
+  }
+}
+
 // v4: appends one entry to a stage's context log. Callers are responsible
 // for enforcing the "only the most-recently-created stage accepts new
 // entries" rule (see the context-entries route) — this function itself

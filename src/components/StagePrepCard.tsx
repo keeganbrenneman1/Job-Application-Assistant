@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import { theme, serifFont, sansFont } from "@/lib/theme";
 import { ContextLog } from "@/components/ContextLog";
 import { STAGE_SECTIONS } from "@/types";
@@ -15,6 +15,10 @@ interface StagePrepCardProps {
   // controls whether ContextLog accepts new entries below.
   isOpenStage: boolean;
   onAddContextEntry: (body: string) => Promise<void>;
+  // v6: "Regenerate" trigger — reruns Call 2 for this stage in place,
+  // using its own current context log (including entries added above,
+  // after this doc was originally generated).
+  onRegenerate: () => Promise<void>;
 }
 
 // One stage-prep in the reverse-chronological feed. `expanded` controls
@@ -22,10 +26,38 @@ interface StagePrepCardProps {
 // to a single header row (prior stages) — toggling never triggers a new
 // API call, the prep's content is already loaded (see spec "Review
 // without regeneration").
-export function StagePrepCard({ prep, expanded, onToggle, isOpenStage, onAddContextEntry }: StagePrepCardProps) {
+export function StagePrepCard({
+  prep,
+  expanded,
+  onToggle,
+  isOpenStage,
+  onAddContextEntry,
+  onRegenerate,
+}: StagePrepCardProps) {
   const sections = STAGE_SECTIONS[prep.stageType];
   const [openSection, setOpenSection] = useState<string | null>(sections[0]?.key ?? null);
   const date = new Date(prep.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateError, setRegenerateError] = useState<string | null>(null);
+
+  const handleRegenerate = async () => {
+    if (
+      !window.confirm(
+        `Regenerate the "${prep.stageLabel}" prep doc? This reruns generation using the current context log above and replaces this doc's content — the previous version won't be kept.`
+      )
+    ) {
+      return;
+    }
+    setRegenerating(true);
+    setRegenerateError(null);
+    try {
+      await onRegenerate();
+    } catch (err) {
+      setRegenerateError(err instanceof Error ? err.message : "Failed to regenerate.");
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   if (!expanded) {
     return (
@@ -89,6 +121,33 @@ export function StagePrepCard({ prep, expanded, onToggle, isOpenStage, onAddCont
       )}
 
       <ContextLog entries={prep.contextEntries} open={isOpenStage} onAdd={onAddContextEntry} />
+
+      <div
+        className="px-3.5 py-2.5 border-t flex items-center gap-2.5"
+        style={{ borderColor: theme.rule }}
+      >
+        <button
+          onClick={handleRegenerate}
+          disabled={regenerating}
+          className="text-xs px-3 py-1.5 tracking-wide flex items-center gap-1.5"
+          style={{
+            background: theme.panelRaised,
+            color: theme.paperMuted,
+            fontFamily: sansFont,
+            fontWeight: 600,
+            border: `1px solid ${theme.rule}`,
+            cursor: regenerating ? "default" : "pointer",
+          }}
+        >
+          <RefreshCw size={12} className={regenerating ? "animate-spin" : ""} />
+          {regenerating ? "Regenerating…" : "Regenerate prep doc"}
+        </button>
+        {regenerateError && (
+          <span className="text-[11px]" style={{ color: theme.danger, fontFamily: sansFont }}>
+            {regenerateError}
+          </span>
+        )}
+      </div>
 
       <div>
         {sections.map((s, i) => {

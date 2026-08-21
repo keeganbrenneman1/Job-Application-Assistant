@@ -392,3 +392,16 @@ export interface AddContextEntryRequest {
 export interface AddContextEntryResponse {
   opportunity: OpportunityWithPreps;
 }
+
+// v6 "Regenerate" trigger (POST .../preps/[prepId]/regenerate): reruns
+// Call 2 for one existing stage prep in place, using that stage's own
+// current context log — including entries logged after the prep's
+// original generation (corrections, clarifications, additional notes).
+// No request body: nothing to configure, same shape as the Company
+// Snapshot Regenerate action. Full-doc regeneration only, never
+// section-level — see README v-next for why that's a separate, backlogged
+// feature. Valid on any existing stage prep, open or closed log alike —
+// this only reads the log, it never writes to it.
+export interface RegeneratePrepResponse {
+  opportunity: OpportunityWithPreps;
+}
