@@ -1,5 +1,5 @@
 // Seeded sample JD + resume for a cold-start demo (portfolio checklist
-// item in JOB APPLICATION ASSISTANT SPEC.md). Lets a fresh install show the full
+// item in JOB_APPLICATION_ASSISTANT_SPEC.md). Lets a fresh install show the full
 // generate → dossier flow without needing a real resume on hand.
 
 export const SAMPLE_APPLICANT_NAME = "Keegan";

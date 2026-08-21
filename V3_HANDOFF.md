@@ -117,5 +117,5 @@ cap removal itself.
 1. `AGENTS.md` / `CLAUDE.md` (auto-loaded)
 2. `README.md`, especially "What's not built yet"
 3. This file
-4. `JOB APPLICATION ASSISTANT SPEC_0808.md` (v2, locked architecture decisions)
+4. `JOB_APPLICATION_ASSISTANT_SPEC.md` (v2, locked architecture decisions)
 5. Whichever of v4/v5 is being picked up, in the README

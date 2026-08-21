@@ -119,7 +119,7 @@ Resume is never persisted, at any stage; only the generated prep docs (and the J
 are saved.
 ## Status
 Next.js (App Router, TypeScript, Tailwind) app implementing the v2 architecture from
-`JOB APPLICATION ASSISTANT SPEC_1008.md`: deterministic resume/JD extraction, a
+`JOB_APPLICATION_ASSISTANT_SPEC.md`: deterministic resume/JD extraction, a
 Claude pipeline (grounded research once per opportunity, then stage-aware reasoning-only
 generation per stage) behind a single swappable mock/live function, and Supabase-backed
 opportunity/stage-prep storage with an in-memory fallback for local dev before a
@@ -180,7 +180,7 @@ to enable real persistence. Use the "Load sample JD + resume" link on the New Pr
 for a cold-start demo without a real resume on hand.
 
 ## Process
-Built using a spec-first, prototype-before-code process — see `JOB APPLICATION ASSISTANT SPEC_1008.md`
-(v2, supersedes the earlier `SPEC_0808.md` draft) and `JOB APPLICATION ASSISTANT SPEC.md` (v1) for the
-locked architecture decisions, and `.claude /agents/` for the review checklists (spec-critic,
-eng-architecture-reviewer, qa-smoke-test) used during build.
+Built using a spec-first, prototype-before-code process — see `JOB_APPLICATION_ASSISTANT_SPEC.md`
+for the locked architecture decisions (supersedes two earlier drafts, since removed from the repo —
+preserved in git history if ever needed), and `.claude /agents/` for the review checklists
+(spec-critic, eng-architecture-reviewer, qa-smoke-test) used during build.
