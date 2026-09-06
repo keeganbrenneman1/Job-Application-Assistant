@@ -1,9 +1,9 @@
 "use client";
 
-import { FolderOpen, FilePlus } from "lucide-react";
+import { FolderOpen, FilePlus, UserRound } from "lucide-react";
 import { theme, serifFont, sansFont } from "@/lib/theme";
 
-export type View = "new" | "archive";
+export type View = "new" | "archive" | "profiles";
 
 interface ChromeProps {
   view: View;
@@ -34,6 +34,7 @@ export function Chrome({ view, setView, wide, children }: ChromeProps) {
           [
             { key: "new", label: "New Prep", icon: FilePlus },
             { key: "archive", label: "Opportunities", icon: FolderOpen },
+            { key: "profiles", label: "Profiles", icon: UserRound },
           ] as const
         ).map((tab) => (
           <button

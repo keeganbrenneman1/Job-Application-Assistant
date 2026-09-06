@@ -5,6 +5,25 @@ and current company information, across the whole interview pipeline. Built for
 personal use (Keegan + spouse) during an active job search, and as a portfolio piece
 demonstrating a hybrid grounded-generation architecture (deterministic extraction + live
 search-grounded research + separate reasoning call). Note: Focused on the steps following securing an initial interview right now.
+## What it does (v10)
+Adds a **Profiles tab** — the management screen v9 explicitly didn't build. Sits between
+New Prep and Opportunities in the nav. Shows every saved profile in a sortable table
+(Name, Created, a truncated Resume preview with the full text on hover), mirroring the
+Opportunities table's layout/sort/mobile-card conventions. A "New Profile" button opens a
+form (name required, resume optional — pick it up now, add it later by deleting and
+recreating) that calls a new `POST /api/profiles`, distinct from v9's save-as-profile
+route: this creates a profile directly, with no opportunity involved. Each row has a
+delete action (`DELETE /api/profiles/[id]`) with a confirmation, same pattern as deleting
+an opportunity. Deleting a profile doesn't touch any opportunity that referenced it — the
+FK now uses `on delete set null`, so the opportunity keeps its own saved
+`applicant_name`/whatever-came-from-the-profile data and just reverts to `profile_id:
+null`, same as if it had never been linked.
+
+Still no edit path — delete + recreate is the only way to fix a typo or swap a resume,
+matching the "smallest real fix" scope this feature keeps to. Still no login/auth and no
+per-user siloing: profiles remain an unauthenticated, opt-in convenience layer shared
+across both users. v9's save-as-profile prompt is unchanged and still the other way a
+profile gets created.
 ## What it does (v9)
 Adds **profiles** — an optional, opt-in way to save a name + resume for reuse across
 opportunities, without any login or per-user identity. A new `profiles` table
@@ -195,8 +214,10 @@ reopen path, Generate Next Step and first-prep generation disabled once closed
 — see "What it does (v8)") — plus v9's opt-in profiles (`profiles` table +
 nullable `profile_id` on `opportunities`; optional selector on the New
 Opportunity form, post-submit save-as-profile prompt, no login/auth — see
-"What it does (v9)"). Deployed on Vercel with a live `ANTHROPIC_API_KEY`
-— Call 1 and Call 2 run for real, not mocked.
+"What it does (v9)") — plus v10's Profiles tab (create/delete management
+screen for the same profiles, `profile_id`'s FK now `on delete set null`
+— see "What it does (v10)"). Deployed on Vercel with a live
+`ANTHROPIC_API_KEY` — Call 1 and Call 2 run for real, not mocked.
 
 ## What's not built yet
 Read `V3_HANDOFF.md` for session notes on v3/v4 — decisions behind them that aren't

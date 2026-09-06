@@ -70,19 +70,38 @@
 --   out. Written once at close time and never updated afterward — same
 --   one-way guarantee as `status`. Intentionally a plain column, not a
 --   table, since it's one fact tied 1:1 to the close event, not a log.
+--
+-- v9 changes from v8:
+-- - New `profiles` table (id, name, resume_text, created_at) — see the
+--   comment on its `create table` statement below for what it is and
+--   isn't. `opportunities` gains a nullable `profile_id` FK to it, set at
+--   creation via the New Opportunity form's optional selector or after the
+--   fact via the post-submit "save as profile" prompt. No backfill.
+--
+-- v10 changes from v9:
+-- - Profiles get their own management screen (the Profiles tab): a "New
+--   Profile" form creates one directly — v9 only ever created profiles
+--   through the save-as-profile prompt — and each can be deleted. No edit
+--   path this session; fixing a typo means delete + recreate.
+-- - `opportunities.profile_id`'s FK gains `on delete set null` so deleting
+--   a linked profile un-links the opportunity instead of being blocked (a
+--   plain FK defaults to blocking the delete) or cascading (which would
+--   delete the opportunity itself — never wanted).
 
 create extension if not exists "pgcrypto";
 
 -- v9: a saved, reusable "who is this opportunity for" — name + resume text
--- — created only via the New Opportunity form's post-submit "save as
--- profile" prompt (see src/app/api/opportunities/[id]/save-as-profile).
--- Created before `opportunities` since that table's profile_id column
--- references it. Not the v-next "resume profiles" item's full identity/
--- attribution mechanism — no login, no auth, no per-user siloing; this is
--- an unauthenticated, opt-in convenience layer shared across both users,
--- same trust model as the rest of the app. resume_text is the one
--- deliberate exception to "resumes are never persisted" above — it's
--- written here, and only here, when a user explicitly opts in.
+-- — created via the New Opportunity form's post-submit "save as profile"
+-- prompt (see src/app/api/opportunities/[id]/save-as-profile) or, as of
+-- v10, directly from the Profiles tab's "New Profile" form (see
+-- src/app/api/profiles). Created before `opportunities` since that table's
+-- profile_id column references it. Not the v-next "resume profiles" item's
+-- full identity/attribution mechanism — no login, no auth, no per-user
+-- siloing; this is an unauthenticated, opt-in convenience layer shared
+-- across both users, same trust model as the rest of the app. resume_text
+-- is the one deliberate exception to "resumes are never persisted" above —
+-- it's written here, and only here, when a user explicitly opts in, and is
+-- nullable since v10's direct-creation form doesn't require one up front.
 create table if not exists profiles (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -101,7 +120,14 @@ create table if not exists opportunities (
   additional_context text, -- v3: persistent opportunity-wide running note, distinct from preps.additional_context's per-stage one-shot field
   status text not null default 'open' check (status in ('open', 'offered', 'rejected', 'withdrawn', 'ghosted')), -- v8: Close Opportunity — see note above; 'open' is the only non-terminal value
   close_note text, -- v8: optional context captured at close time, see note above
-  profile_id uuid references profiles (id), -- v9: set at creation when the New Opportunity form's profile selector was used, or after the fact by the save-as-profile prompt; null for manual entry never saved as a profile — no backfill for existing rows
+  -- v9: set at creation when the New Opportunity form's profile selector
+  -- was used, or after the fact by the save-as-profile prompt; null for
+  -- manual entry never saved as a profile — no backfill for existing rows.
+  -- `on delete set null` (v10): deleting a profile from the Profiles tab
+  -- un-links any opportunity that referenced it rather than blocking the
+  -- delete or cascading — the opportunity's own applicant_name/jd_text
+  -- rows are untouched either way, this only clears the pointer.
+  profile_id uuid references profiles (id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -284,8 +310,18 @@ begin
     select 1 from information_schema.columns
     where table_name = 'opportunities' and column_name = 'profile_id'
   ) then
-    alter table opportunities add column profile_id uuid references profiles (id);
+    alter table opportunities add column profile_id uuid references profiles (id) on delete set null;
   end if;
+
+  -- v10: unconditional refresh of the profile_id FK's delete action, same
+  -- pattern as the stage_type check refresh below — a database that ran
+  -- the v9 statement above before this file added `on delete set null`
+  -- has the old no-action constraint in place, which would block deleting
+  -- a linked profile from the new Profiles tab instead of un-linking it.
+  -- Postgres names an inline column FK '<table>_<column>_fkey' by default.
+  alter table opportunities drop constraint if exists opportunities_profile_id_fkey;
+  alter table opportunities add constraint opportunities_profile_id_fkey
+    foreign key (profile_id) references profiles (id) on delete set null;
 
   -- Unconditional refresh, not just "add if missing": an earlier version
   -- of this file's stage_type check constraint (both the fresh-create

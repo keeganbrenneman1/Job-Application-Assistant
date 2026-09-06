@@ -6,10 +6,14 @@ import { NewPrepForm, type NewPrepInput } from "@/components/NewPrepForm";
 import { LogAppliedForm } from "@/components/LogAppliedForm";
 import { OpportunityDetail } from "@/components/OpportunityDetail";
 import { Archive } from "@/components/Archive";
+import { Profiles } from "@/components/Profiles";
+import { NewProfileForm } from "@/components/NewProfileForm";
 import { SaveAsProfilePrompt } from "@/components/SaveAsProfilePrompt";
 import { theme, sansFont } from "@/lib/theme";
 import type {
   CloseOpportunityResponse,
+  CreateProfileRequest,
+  CreateProfileResponse,
   FirstPrepRequest,
   FirstPrepResponse,
   GenerateResponse,
@@ -20,6 +24,7 @@ import type {
   OpportunityStatus,
   OpportunitySummary,
   OpportunityWithPreps,
+  Profile,
   RegenerateResearchResponse,
   SaveAsProfileResponse,
 } from "@/types";
@@ -63,6 +68,9 @@ export default function App() {
   const [archiveLoading, setArchiveLoading] = useState(false);
   const [activeOpportunity, setActiveOpportunity] = useState<OpportunityWithPreps | null>(null);
   const [showLogAppliedForm, setShowLogAppliedForm] = useState(false);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [showNewProfileForm, setShowNewProfileForm] = useState(false);
   // Story 3: set right after a New Opportunity submission whose profileId
   // was empty and whose applicantName + resumeText were both manually
   // typed (see handleGenerate below). Purely transient client state — the
@@ -89,10 +97,24 @@ export default function App() {
     }
   };
 
+  // v10: Profiles tab's own list — same shape/loading pattern as loadArchive.
+  const loadProfiles = async () => {
+    setProfilesLoading(true);
+    try {
+      const res = await fetch("/api/profiles");
+      const data = await res.json();
+      setProfiles(res.ok ? data.profiles : []);
+    } finally {
+      setProfilesLoading(false);
+    }
+  };
+
   const changeView = (v: View) => {
     setView(v);
     setShowLogAppliedForm(false);
+    setShowNewProfileForm(false);
     if (v === "archive") loadArchive();
+    if (v === "profiles") loadProfiles();
   };
 
   // Three steps against three separate requests — see /api/generate for
@@ -321,6 +343,32 @@ export default function App() {
     setSaveProfilePrompt(null);
   };
 
+  // v10: Profiles tab's "New Profile" form — creates a profile directly.
+  const handleCreateProfile = async (input: CreateProfileRequest) => {
+    const res = await fetch("/api/profiles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to create profile.");
+    const { profile } = data as CreateProfileResponse;
+    setProfiles((prev) => [profile, ...prev]);
+    setShowNewProfileForm(false);
+  };
+
+  // v10: un-links (doesn't delete) any opportunity that referenced this
+  // profile — see the schema note on profile_id's `on delete set null`.
+  const handleDeleteProfile = async (id: string) => {
+    const res = await fetch(`/api/profiles/${id}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 404) {
+      const data = await res.json().catch(() => ({}));
+      window.alert(data.error || "Failed to delete profile.");
+      return;
+    }
+    setProfiles((prev) => prev.filter((p) => p.id !== id));
+  };
+
   const handleDeleteOpportunity = async (id: string) => {
     const res = await fetch(`/api/opportunities/${id}`, { method: "DELETE" });
     if (!res.ok && res.status !== 404) {
@@ -332,9 +380,10 @@ export default function App() {
   };
 
   const showingArchiveList = view === "archive" && !activeOpportunity && !showLogAppliedForm;
+  const showingProfilesList = view === "profiles" && !activeOpportunity && !showNewProfileForm;
 
   return (
-    <Chrome view={view} setView={changeView} wide={showingArchiveList}>
+    <Chrome view={view} setView={changeView} wide={showingArchiveList || showingProfilesList}>
       {activeOpportunity ? (
         <>
           {saveProfilePrompt && saveProfilePrompt.opportunityId === activeOpportunity.id && (
@@ -362,6 +411,26 @@ export default function App() {
         </>
       ) : view === "new" ? (
         <NewPrepForm onGenerate={handleGenerate} />
+      ) : view === "profiles" ? (
+        showNewProfileForm ? (
+          <div>
+            <button
+              onClick={() => setShowNewProfileForm(false)}
+              className="text-xs mb-4 cursor-pointer"
+              style={{ color: theme.signal, fontFamily: sansFont }}
+            >
+              ← back
+            </button>
+            <NewProfileForm onCreate={handleCreateProfile} />
+          </div>
+        ) : (
+          <Profiles
+            items={profiles}
+            loading={profilesLoading}
+            onDelete={handleDeleteProfile}
+            onNew={() => setShowNewProfileForm(true)}
+          />
+        )
       ) : showLogAppliedForm ? (
         <div>
           <button
