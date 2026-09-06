@@ -218,12 +218,13 @@ export async function listProfiles(): Promise<Profile[]> {
   return [...memoryDB().profiles].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-// The only way a profile is ever created — via the New Opportunity form's
-// post-submit save-as-profile prompt (see the save-as-profile route). No
-// other code path inserts into this table: no profile management UI this
-// session. resumeText is written here, and only here — see the schema
-// note on resumes never otherwise being persisted.
-export async function createProfile(name: string, resumeText: string): Promise<Profile> {
+// Created either by the New Opportunity form's post-submit save-as-profile
+// prompt (always both fields non-empty — see that route's validation) or,
+// as of v10, directly via the Profiles tab's "New Profile" form (name
+// required, resumeText optional — that route's validation). resumeText is
+// written here, and only here — see the schema note on resumes never
+// otherwise being persisted.
+export async function createProfile(name: string, resumeText: string | null): Promise<Profile> {
   const supabase = getSupabase();
   if (supabase) {
     const { data, error } = await supabase
@@ -243,6 +244,28 @@ export async function createProfile(name: string, resumeText: string): Promise<P
   };
   memoryDB().profiles.unshift(profile);
   return profile;
+}
+
+// v10: deletes a profile from the Profiles tab. Supabase cascades the
+// un-link via the FK's `on delete set null` (see schema.sql) — any
+// opportunity that referenced this profile keeps its own data but reverts
+// to profile_id: null, same as if it had never been linked. The in-memory
+// store does the equivalent by hand. Returns false if nothing matched.
+export async function deleteProfile(id: string): Promise<boolean> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { error, count } = await supabase.from("profiles").delete({ count: "exact" }).eq("id", id);
+    if (error) throw new Error(`deleteProfile: ${error.message}`);
+    return (count ?? 0) > 0;
+  }
+
+  const db = memoryDB();
+  const before = db.profiles.length;
+  db.profiles = db.profiles.filter((p) => p.id !== id);
+  for (const opportunity of db.opportunities) {
+    if (opportunity.profileId === id) opportunity.profileId = null;
+  }
+  return db.profiles.length < before;
 }
 
 // Call 1's research result, persisted once and reused for every later

@@ -499,3 +499,18 @@ export interface SaveAsProfileResponse {
   profile: Profile;
   opportunity: OpportunityWithPreps;
 }
+
+// v10: the Profiles tab's "New Profile" form — creates a profile directly,
+// unlike the save-as-profile flow above which is always tied to the
+// opportunity it was triggered from. resumeText is optional here (unlike
+// SaveAsProfileRequest's, which requires both fields non-empty) since
+// there's no edit path — only delete + recreate — so a name-only profile
+// should still be creatable.
+export interface CreateProfileRequest {
+  name: string;
+  resumeText?: string;
+}
+
+export interface CreateProfileResponse {
+  profile: Profile;
+}
