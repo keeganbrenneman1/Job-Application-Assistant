@@ -51,6 +51,17 @@
 --   place, unwritten by any new code path, purely so pre-v4 rows that
 --   already have a value keep displaying it. Opportunity-level
 --   `additional_context` (v3, above) is untouched by this.
+--
+-- v8 changes from v4:
+-- - `opportunities` gain `status` (Close Opportunity): 'open' until a user
+--   explicitly closes it by picking one of 'offered' / 'rejected' /
+--   'withdrawn' / 'ghosted' (POST .../close) — there's no separate closed
+--   boolean, status doubles as the open/closed state, and closing is
+--   one-way (no code path ever writes 'open' back over a closed row). This
+--   is NOT the v-next dashboard/tracker column the earlier "deliberately
+--   no status" note below refers to — that note was about cross-opportunity
+--   reporting/analytics, which this session still does not add; this
+--   column only backs the close action and its display.
 
 create extension if not exists "pgcrypto";
 
@@ -63,13 +74,15 @@ create table if not exists opportunities (
   company_research jsonb,
   applied_date date, -- nullable: unset for a "Log Applied" quick-add until the user sets it, or for pre-existing opportunities until backfilled
   additional_context text, -- v3: persistent opportunity-wide running note, distinct from preps.additional_context's per-stage one-shot field
+  status text not null default 'open' check (status in ('open', 'offered', 'rejected', 'withdrawn', 'ghosted')), -- v8: Close Opportunity — see note above; 'open' is the only non-terminal value
   created_at timestamptz not null default now()
 );
 
 create index if not exists opportunities_created_idx on opportunities (created_at desc);
 
--- Deliberately no `status` / cross-opportunity "current stage" column —
--- that's the v-next tracker, explicitly out of scope here.
+-- Deliberately no cross-opportunity "current stage"/reporting column
+-- beyond `status` above — a dashboard/tracker over these statuses is the
+-- v-next tracker, explicitly out of scope here.
 create table if not exists preps (
   id uuid primary key default gen_random_uuid(),
   opportunity_id uuid not null references opportunities (id) on delete cascade,
@@ -217,6 +230,16 @@ begin
     where table_name = 'opportunities' and column_name = 'additional_context'
   ) then
     alter table opportunities add column additional_context text;
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns
+    where table_name = 'opportunities' and column_name = 'status'
+  ) then
+    alter table opportunities add column status text not null default 'open';
+    alter table opportunities add constraint opportunities_status_check check (
+      status in ('open', 'offered', 'rejected', 'withdrawn', 'ghosted')
+    );
   end if;
 
   -- Unconditional refresh, not just "add if missing": an earlier version

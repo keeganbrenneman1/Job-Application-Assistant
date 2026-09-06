@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarPlus, Trash2 } from "lucide-react";
 import { theme, serifFont, sansFont } from "@/lib/theme";
+import { statusLabelFor } from "@/types";
 import type { OpportunitySummary } from "@/types";
 
 interface ArchiveProps {
@@ -13,7 +14,15 @@ interface ArchiveProps {
   onLogApplied: () => void;
 }
 
-type SortKey = "role" | "company" | "applicant" | "createdAt" | "updatedAt" | "stage" | "interviewerTitle";
+type SortKey =
+  | "role"
+  | "company"
+  | "applicant"
+  | "createdAt"
+  | "updatedAt"
+  | "stage"
+  | "interviewerTitle"
+  | "status";
 type SortDir = "asc" | "desc";
 
 const COLUMNS: { key: SortKey; label: string }[] = [
@@ -24,6 +33,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "updatedAt", label: "Last Updated" },
   { key: "stage", label: "Stage" },
   { key: "interviewerTitle", label: "Interviewer Title" },
+  { key: "status", label: "Status" },
 ];
 
 // Date columns read most-useful newest-first on first click; text columns
@@ -45,6 +55,10 @@ function interviewerTitleDisplay(item: OpportunitySummary): string {
   return item.latestInterviewerTitle ?? "—";
 }
 
+function statusDisplay(item: OpportunitySummary): string {
+  return statusLabelFor(item.status);
+}
+
 function compareByKey(a: OpportunitySummary, b: OpportunitySummary, key: SortKey): number {
   switch (key) {
     case "role":
@@ -61,6 +75,8 @@ function compareByKey(a: OpportunitySummary, b: OpportunitySummary, key: SortKey
       return stageDisplay(a).localeCompare(stageDisplay(b), undefined, { sensitivity: "base" });
     case "interviewerTitle":
       return interviewerTitleDisplay(a).localeCompare(interviewerTitleDisplay(b), undefined, { sensitivity: "base" });
+    case "status":
+      return statusDisplay(a).localeCompare(statusDisplay(b), undefined, { sensitivity: "base" });
   }
 }
 
@@ -173,6 +189,8 @@ export function Archive({ items, loading, onOpen, onDelete, onLogApplied }: Arch
               <div className="text-[11px] mt-0.5 truncate" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
                 {item.applicantName} · {formatTimestamp(item.createdAt)} · {stageDisplay(item)}
                 {item.latestInterviewerTitle ? ` · ${item.latestInterviewerTitle}` : ""}
+                {" · "}
+                {statusDisplay(item)}
               </div>
             </div>
             <button
@@ -239,6 +257,12 @@ export function Archive({ items, loading, onOpen, onDelete, onLogApplied }: Arch
                 </td>
                 <td className={cellClass + " text-xs"} style={{ color: theme.paperMuted }}>
                   {interviewerTitleDisplay(item)}
+                </td>
+                <td
+                  className={cellClass + " text-xs"}
+                  style={{ color: item.status === "open" ? theme.paperMuted : theme.brass }}
+                >
+                  {statusDisplay(item)}
                 </td>
                 <td className="px-2.5 py-2.5">
                   <button

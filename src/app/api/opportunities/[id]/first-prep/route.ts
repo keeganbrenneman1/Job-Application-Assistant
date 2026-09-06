@@ -50,6 +50,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         { status: 400 }
       );
     }
+    if (opportunity.status !== "open") {
+      return NextResponse.json(
+        { error: "This opportunity is closed — no further stages can be generated." },
+        { status: 400 }
+      );
+    }
 
     const stageLabel = stageLabelFor(FIRST_STAGE);
     const { content, research, researchIsFresh, source } = await generatePrep({

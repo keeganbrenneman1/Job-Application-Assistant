@@ -228,6 +228,26 @@ export const STAGE_SECTIONS: Record<StageType, StageSectionDef[]> = {
   ],
 };
 
+// Close Opportunity (see README): status doubles as the open/closed state —
+// there's no separate "closed" boolean. "open" is the only non-terminal
+// value; picking any of the other four both records the outcome and closes
+// the opportunity in the same action. No transition back to "open" is ever
+// written by any code path — see the close route for where that's enforced.
+export type OpportunityStatus = "open" | "offered" | "rejected" | "withdrawn" | "ghosted";
+
+// The 4 selectable closing outcomes — OpportunityStatus minus "open".
+export const CLOSE_STATUSES: { id: Exclude<OpportunityStatus, "open">; label: string }[] = [
+  { id: "offered", label: "Offered" },
+  { id: "rejected", label: "Rejected" },
+  { id: "withdrawn", label: "Withdrawn" },
+  { id: "ghosted", label: "Ghosted" },
+];
+
+export function statusLabelFor(status: OpportunityStatus): string {
+  if (status === "open") return "Open";
+  return CLOSE_STATUSES.find((s) => s.id === status)?.label ?? status;
+}
+
 export interface CompanyResearch {
   basicInfo: string; // size / industry / funding
   recentNews: string;
@@ -253,6 +273,9 @@ export interface Opportunity {
   // Opportunity Detail page; included as-is in every future Call 2 for
   // this opportunity when non-empty. Not a log/entries table by design.
   additionalContext: string | null;
+  // Close Opportunity: "open" until a user explicitly closes it by picking
+  // one of the 4 outcomes below. See CLOSE_STATUSES/statusLabelFor above.
+  status: OpportunityStatus;
   createdAt: string;
 }
 
@@ -403,5 +426,17 @@ export interface AddContextEntryResponse {
 // feature. Valid on any existing stage prep, open or closed log alike —
 // this only reads the log, it never writes to it.
 export interface RegeneratePrepResponse {
+  opportunity: OpportunityWithPreps;
+}
+
+// Close Opportunity (POST .../close): picks one of the 4 closing outcomes
+// and closes the opportunity in the same action — see OpportunityStatus.
+// Only valid while status is still "open"; the route rejects this once an
+// opportunity is already closed (no reopen path — see README).
+export interface CloseOpportunityRequest {
+  status: Exclude<OpportunityStatus, "open">;
+}
+
+export interface CloseOpportunityResponse {
   opportunity: OpportunityWithPreps;
 }

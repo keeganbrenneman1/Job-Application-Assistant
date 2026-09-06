@@ -4,6 +4,7 @@ import type {
   CompanyResearch,
   ContextEntry,
   Opportunity,
+  OpportunityStatus,
   OpportunitySummary,
   OpportunityWithPreps,
   StageContent,
@@ -75,6 +76,7 @@ export async function createOpportunity(
     companyResearch: null,
     appliedDate,
     additionalContext,
+    status: "open",
     createdAt: new Date().toISOString(),
   };
   memoryDB().opportunities.unshift(opportunity);
@@ -142,6 +144,26 @@ export async function setOpportunityAdditionalContext(
 
   const opportunity = memoryDB().opportunities.find((o) => o.id === opportunityId);
   if (opportunity) opportunity.additionalContext = additionalContext;
+}
+
+// Close Opportunity: sets status to one of the 4 closing outcomes. Callers
+// (the close route) are responsible for only calling this while status is
+// still "open" — there is no reopen path, and this function itself does
+// not re-check the current value, same division of responsibility as the
+// rest of store.ts (e.g. addContextEntry's "open stage" rule).
+export async function setOpportunityStatus(
+  opportunityId: string,
+  status: OpportunityStatus
+): Promise<void> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { error } = await supabase.from("opportunities").update({ status }).eq("id", opportunityId);
+    if (error) throw new Error(`setOpportunityStatus: ${error.message}`);
+    return;
+  }
+
+  const opportunity = memoryDB().opportunities.find((o) => o.id === opportunityId);
+  if (opportunity) opportunity.status = status;
 }
 
 // Call 1's research result, persisted once and reused for every later
@@ -393,6 +415,7 @@ function rowToOpportunity(row: any): Opportunity {
     companyResearch: row.company_research ?? null,
     appliedDate: row.applied_date ?? null,
     additionalContext: row.additional_context ?? null,
+    status: row.status ?? "open",
     createdAt: row.created_at,
   };
 }

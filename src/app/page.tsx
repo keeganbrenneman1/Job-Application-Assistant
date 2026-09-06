@@ -8,6 +8,7 @@ import { OpportunityDetail } from "@/components/OpportunityDetail";
 import { Archive } from "@/components/Archive";
 import { theme, sansFont } from "@/lib/theme";
 import type {
+  CloseOpportunityResponse,
   FirstPrepRequest,
   FirstPrepResponse,
   GenerateResponse,
@@ -15,6 +16,7 @@ import type {
   LogAppliedResponse,
   NextStepRequest,
   NextStepResponse,
+  OpportunityStatus,
   OpportunitySummary,
   OpportunityWithPreps,
   RegenerateResearchResponse,
@@ -250,6 +252,22 @@ export default function App() {
     setActiveOpportunity(data.opportunity as OpportunityWithPreps);
   };
 
+  // Close Opportunity: picks one of the 4 closing outcomes and closes the
+  // opportunity in the same action — see CLOSE_STATUSES in src/types. No
+  // reopen path, enforced server-side too (see .../close/route.ts).
+  const handleCloseOpportunity = async (status: OpportunityStatus) => {
+    if (!activeOpportunity) return;
+    const res = await fetch(`/api/opportunities/${activeOpportunity.id}/close`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to close opportunity.");
+    const { opportunity } = data as CloseOpportunityResponse;
+    setActiveOpportunity(opportunity);
+  };
+
   const handleOpenOpportunity = async (id: string) => {
     const res = await fetch(`/api/opportunities/${id}`);
     const data = await res.json();
@@ -284,6 +302,7 @@ export default function App() {
           onRegenerateResearch={handleRegenerateResearch}
           onAddContextEntry={handleAddContextEntry}
           onRegeneratePrep={handleRegeneratePrep}
+          onCloseOpportunity={handleCloseOpportunity}
           onBack={() => setActiveOpportunity(null)}
         />
       ) : view === "new" ? (
