@@ -224,7 +224,10 @@ Read `V3_HANDOFF.md` for session notes on v3/v4 — decisions behind them that a
 visible from the code alone, and constraints future work should respect. Multi-hop
 context accumulation (a rolling summary across all prior stages, not just the
 immediately preceding one) remains unbuilt — see "What it does (v5)" above for why
-that was deliberately deferred rather than built this session.
+that was deliberately deferred rather than built this session. Read `PROFILES_HANDOFF.md`
+before touching profiles further — in particular, before starting "Resume
+recommendations from outcomes" below, which is easy to mistakenly assume is now
+unblocked since the rest of "Resume profiles" shipped without per-user identity.
 - **v-next:**
     - Per-user identity/attribution: currently no concept of separate users — v1 was built with no per-user separation. A lightweight mechanism (not necessarily full auth) for the app to know which user an action or piece of data belongs to, and enforce that one user can't view or modify another's. Prerequisite for "Feedback collection" below and for the still-unbuilt half of "Resume profiles" — called out once, here, rather than restated inside either.
   - Section-level requests for adjusting the prep doc: Targeted correction for narrow errors that don’t warrant regenerating the whole doc — e.g., a wrong-audience question in the logistics section, when the rest of the doc is fine. Requires Call 2 (or a variant of it) to isolate a specific section of its own prior output and rewrite just that part using new feedback, without touching or re-rolling the sections that were already correct. Real added complexity versus full regen: not just “more context, rerun everything,” but “identify a bounded piece of prior output and revise it in place.” Backlogged separately; full regen (above) should be evaluated first via real usage before deciding whether section-level regen is worth building.
