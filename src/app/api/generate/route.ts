@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { applicantName, company, role, jdText, appliedDate, additionalContext } = body;
+  const { applicantName, company, role, jdText, appliedDate, additionalContext, profileId } = body;
 
   if (!applicantName?.trim()) {
     return NextResponse.json({ error: "applicantName is required." }, { status: 400 });
@@ -45,7 +45,8 @@ export async function POST(request: Request) {
       role.trim(),
       jdText.trim(),
       appliedDate?.trim() || null,
-      additionalContext?.trim() || null
+      additionalContext?.trim() || null,
+      profileId?.trim() || null
     );
 
     const response: GenerateResponse = { opportunity };

@@ -7,6 +7,7 @@ import type {
   OpportunityStatus,
   OpportunitySummary,
   OpportunityWithPreps,
+  Profile,
   StageContent,
   StagePrep,
   StageType,
@@ -23,13 +24,14 @@ interface MemoryDB {
   opportunities: Opportunity[];
   preps: StagePrep[];
   contextEntries: ContextEntry[];
+  profiles: Profile[];
 }
 
 const globalForMemory = globalThis as unknown as { __jaaMemoryDB?: MemoryDB };
 
 function memoryDB(): MemoryDB {
   if (!globalForMemory.__jaaMemoryDB) {
-    globalForMemory.__jaaMemoryDB = { opportunities: [], preps: [], contextEntries: [] };
+    globalForMemory.__jaaMemoryDB = { opportunities: [], preps: [], contextEntries: [], profiles: [] };
   }
   return globalForMemory.__jaaMemoryDB;
 }
@@ -41,13 +43,17 @@ function memoryDB(): MemoryDB {
 // for "Log Applied" (added later via the Detail page, once the record
 // already exists) and optionally supplied up front by "New Opportunity",
 // since that path has no existing record to attach it to beforehand.
+// profileId is set when the New Opportunity form's optional profile
+// selector was used (see Profile) — null for manual entry and always null
+// for "Log Applied", which has no profile selector this session.
 export async function createOpportunity(
   applicantName: string,
   company: string,
   role: string,
   jdText: string,
   appliedDate: string | null,
-  additionalContext: string | null
+  additionalContext: string | null,
+  profileId: string | null
 ): Promise<Opportunity> {
   const supabase = getSupabase();
   if (supabase) {
@@ -60,6 +66,7 @@ export async function createOpportunity(
         jd_text: jdText,
         applied_date: appliedDate,
         additional_context: additionalContext,
+        profile_id: profileId,
       })
       .select()
       .single();
@@ -78,6 +85,7 @@ export async function createOpportunity(
     additionalContext,
     status: "open",
     closeNote: null,
+    profileId,
     createdAt: new Date().toISOString(),
   };
   memoryDB().opportunities.unshift(opportunity);
@@ -174,6 +182,67 @@ export async function closeOpportunity(
     opportunity.status = status;
     opportunity.closeNote = note;
   }
+}
+
+// Links an already-created opportunity to a profile — used by the
+// save-as-profile route right after createProfile below. One-way in
+// practice (no code path ever clears it back to null), but that's enforced
+// by the caller (the profile_id-is-already-set guard in the route), not
+// here — same division of responsibility as the rest of this file.
+export async function setOpportunityProfileId(opportunityId: string, profileId: string): Promise<void> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ profile_id: profileId })
+      .eq("id", opportunityId);
+    if (error) throw new Error(`setOpportunityProfileId: ${error.message}`);
+    return;
+  }
+
+  const opportunity = memoryDB().opportunities.find((o) => o.id === opportunityId);
+  if (opportunity) opportunity.profileId = profileId;
+}
+
+// Every saved profile, newest first — backs the New Opportunity form's
+// optional selector (GET /api/profiles). No per-user filter: profiles are
+// shared across both users, same trust model as opportunities.
+export async function listProfiles(): Promise<Profile[]> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+    if (error) throw new Error(`listProfiles: ${error.message}`);
+    return (data ?? []).map(rowToProfile);
+  }
+
+  return [...memoryDB().profiles].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+// The only way a profile is ever created — via the New Opportunity form's
+// post-submit save-as-profile prompt (see the save-as-profile route). No
+// other code path inserts into this table: no profile management UI this
+// session. resumeText is written here, and only here — see the schema
+// note on resumes never otherwise being persisted.
+export async function createProfile(name: string, resumeText: string): Promise<Profile> {
+  const supabase = getSupabase();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .insert({ name, resume_text: resumeText })
+      .select()
+      .single();
+    if (error) throw new Error(`createProfile: ${error.message}`);
+    return rowToProfile(data);
+  }
+
+  const profile: Profile = {
+    id: randomUUID(),
+    name,
+    resumeText,
+    createdAt: new Date().toISOString(),
+  };
+  memoryDB().profiles.unshift(profile);
+  return profile;
 }
 
 // Call 1's research result, persisted once and reused for every later
@@ -427,6 +496,17 @@ function rowToOpportunity(row: any): Opportunity {
     additionalContext: row.additional_context ?? null,
     status: row.status ?? "open",
     closeNote: row.close_note ?? null,
+    profileId: row.profile_id ?? null,
+    createdAt: row.created_at,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToProfile(row: any): Profile {
+  return {
+    id: row.id,
+    name: row.name,
+    resumeText: row.resume_text ?? null,
     createdAt: row.created_at,
   };
 }

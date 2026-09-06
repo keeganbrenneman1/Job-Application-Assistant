@@ -47,6 +47,7 @@ export async function POST(request: Request) {
       role.trim(),
       "",
       appliedDate?.trim() || null,
+      null,
       null
     );
 

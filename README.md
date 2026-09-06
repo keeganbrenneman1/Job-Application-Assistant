@@ -5,6 +5,34 @@ and current company information, across the whole interview pipeline. Built for
 personal use (Keegan + spouse) during an active job search, and as a portfolio piece
 demonstrating a hybrid grounded-generation architecture (deterministic extraction + live
 search-grounded research + separate reasoning call). Note: Focused on the steps following securing an initial interview right now.
+## What it does (v9)
+Adds **profiles** — an optional, opt-in way to save a name + resume for reuse across
+opportunities, without any login or per-user identity. A new `profiles` table
+(`id`, `name`, `resume_text`, `created_at`) holds them; `opportunities` gains a nullable
+`profile_id` foreign key to it. The New Opportunity form shows an optional profile
+selector (hidden entirely until at least one profile exists) above the existing
+Applicant field — picking one prefills the applicant name and resume, both of which stay
+fully editable afterward, same as always. Manual entry remains fully supported and
+unchanged: no profile selection is ever required, and skipping the selector produces
+identical opportunity data to before this session.
+
+The other half is how a profile gets created in the first place: there's no profile
+management UI (no create/edit/delete screen). Instead, right after submitting the New
+Opportunity form, if no profile was selected *and* both the applicant name and resume
+were typed manually (non-empty), a small non-blocking banner offers "Save as profile?"
+on the newly created opportunity's detail page. The opportunity is already saved either
+way. Accepting creates the `profiles` row from what was just typed and links it to that
+opportunity; declining or ignoring it leaves the opportunity exactly as submitted, with
+no profile created and no repeat prompt. Typing only a name or only a resume (not both)
+never triggers the prompt — no partial profiles. **Resumes persist only when a user opts
+into a profile** — manually entered resumes not tied to a profile follow the same
+never-persisted behavior as before this session.
+
+Deliberately not built this session (see "What's not built yet" for the fuller
+identity/attribution item this partially resolves): no login/auth, no profile
+management UI, no backfill of `profile_id` onto existing opportunities, and no resume
+parsing/matching — a profile just stores what the existing upload → text-extraction path
+already produces.
 ## What it does (v8)
 Adds a **Close Opportunity** action from the Opportunity Detail page.
 Closing picks one of four outcomes — Offered, Rejected, Withdrawn, or
@@ -164,7 +192,10 @@ v7's per-stage Export to PDF trigger (no Claude call, renders already-generated
 content via `@react-pdf/renderer` — see "What it does (v7)") — plus v8's Close
 Opportunity action (`status` + optional `close_note` on `opportunities`; no
 reopen path, Generate Next Step and first-prep generation disabled once closed
-— see "What it does (v8)"). Deployed on Vercel with a live `ANTHROPIC_API_KEY`
+— see "What it does (v8)") — plus v9's opt-in profiles (`profiles` table +
+nullable `profile_id` on `opportunities`; optional selector on the New
+Opportunity form, post-submit save-as-profile prompt, no login/auth — see
+"What it does (v9)"). Deployed on Vercel with a live `ANTHROPIC_API_KEY`
 — Call 1 and Call 2 run for real, not mocked.
 
 ## What's not built yet
@@ -174,11 +205,11 @@ context accumulation (a rolling summary across all prior stages, not just the
 immediately preceding one) remains unbuilt — see "What it does (v5)" above for why
 that was deliberately deferred rather than built this session.
 - **v-next:**
-    - Per-user identity/attribution: currently no concept of separate users — v1 was built with no per-user separation. A lightweight mechanism (not necessarily full auth) for the app to know which user an action or piece of data belongs to, and enforce that one user can't view or modify another's. Prerequisite for both "Feedback collection" and "Resume profiles" below — called out once, here, rather than restated inside either.
+    - Per-user identity/attribution: currently no concept of separate users — v1 was built with no per-user separation. A lightweight mechanism (not necessarily full auth) for the app to know which user an action or piece of data belongs to, and enforce that one user can't view or modify another's. Prerequisite for "Feedback collection" below and for the still-unbuilt half of "Resume profiles" — called out once, here, rather than restated inside either.
   - Section-level requests for adjusting the prep doc: Targeted correction for narrow errors that don’t warrant regenerating the whole doc — e.g., a wrong-audience question in the logistics section, when the rest of the doc is fine. Requires Call 2 (or a variant of it) to isolate a specific section of its own prior output and rewrite just that part using new feedback, without touching or re-rolling the sections that were already correct. Real added complexity versus full regen: not just “more context, rerun everything,” but “identify a bounded piece of prior output and revise it in place.” Backlogged separately; full regen (above) should be evaluated first via real usage before deciding whether section-level regen is worth building.
   - Resume profiles, split into two dependent parts:
-      - Opt-in resume storage for reuse — a user can choose to create a profile and save resume(s) for reuse across opportunities. Strictly opt-in (app remains fully usable without one) and strictly siloed (no user can view/access another's). Blocked on per-user identity/attribution, above.
-      - Resume recommendations from outcomes — using outcome data across a user's closed opportunities to suggest resume refinements over time (a resume as a living artifact, improved by accumulated real signal). The outcome/status data itself now exists (v8's `status` + `close_note` on `opportunities`); still blocked on per-user identity/attribution, above, since this needs to reason over one user's outcomes specifically. Minimum sample size per resume version not yet scoped.
+      - ~~Opt-in resume storage for reuse~~ — **done, v9.** Built without per-user identity/attribution after all: profiles are an unauthenticated, opt-in convenience layer shared across both users (same trust model as the rest of the app), not the strictly-siloed-per-user mechanism originally scoped here. See "What it does (v9)".
+      - Resume recommendations from outcomes — using outcome data across a user's closed opportunities to suggest resume refinements over time (a resume as a living artifact, improved by accumulated real signal). The outcome/status data itself now exists (v8's `status` + `close_note` on `opportunities`); still blocked on per-user identity/attribution, above, since this needs to reason over one user's outcomes specifically — v9's profiles have no notion of "one user," just a saved name + resume. Minimum sample size per resume version not yet scoped.
   - Feedback collection AND use, kept together as one item (not split into phases) to extend into the post-interview part of the job search lifecycle — blocked on per-user identity/attribution, above
   - ”Share report” option to create a PDF of a whole opportunity, all stages combined, with each question in each stage expanded. v7 built the single-stage slice of this (see "What it does (v7)") — the user can already export one stage's prep doc to PDF and share it or bring it to the live interview; what remains here is specifically the whole-opportunity, all-stages-combined version, deliberately not built in that session.
   - UX
