@@ -9,6 +9,7 @@ import { StagePrepCard } from "@/components/StagePrepCard";
 import { NextStepForm } from "@/components/NextStepForm";
 import { FirstPrepForm } from "@/components/FirstPrepForm";
 import { CLOSE_STATUSES, statusLabelFor } from "@/types";
+import { inputStyle } from "@/components/formStyles";
 import type { FirstPrepRequest, NextStepRequest, OpportunityStatus, OpportunityWithPreps } from "@/types";
 
 interface OpportunityDetailProps {
@@ -30,36 +31,55 @@ interface OpportunityDetailProps {
   // v6: "Regenerate" trigger — reruns Call 2 for one stage prep in place,
   // using that stage's own current context log (see StagePrepCard).
   onRegeneratePrep: (prepId: string) => Promise<void>;
-  // Close Opportunity: picks one of the 4 closing outcomes and closes the
-  // opportunity in the same action. No reopen path — see CloseOpportunity
-  // below, which gates this behind an explicit confirmation.
-  onCloseOpportunity: (status: OpportunityStatus) => Promise<void>;
+  // Close Opportunity: picks one of the 4 closing outcomes, plus an
+  // optional note on why, and closes the opportunity in the same action.
+  // No reopen path — see CloseOpportunity below, which gates this behind
+  // an explicit confirmation.
+  onCloseOpportunity: (status: OpportunityStatus, note: string) => Promise<void>;
   onBack: () => void;
 }
 
-// Close Opportunity control: while open, offers the 4 closing outcomes,
-// each requiring an explicit confirm() before committing (irreversible —
-// see README "No reopen path"). Once closed, renders as a read-only status
-// badge instead — there's nothing left to do here.
+// Close Opportunity control: while open, offers an optional note plus the
+// 4 closing outcomes, each requiring an explicit confirm() before
+// committing (irreversible — see README "No reopen path"). The note isn't
+// required — closing shouldn't be blocked on writing something up — but is
+// worth asking for given how consequential and permanent this action is:
+// it's the one place to capture *why* an opportunity ended the way it did,
+// which stays useful later even though no cross-opportunity reporting on
+// it is built yet (see Opportunity.closeNote). Once closed, renders as a
+// read-only status badge instead — there's nothing left to do here.
 function CloseOpportunity({
   status,
+  closeNote,
   onClose,
 }: {
   status: OpportunityStatus;
-  onClose: (status: OpportunityStatus) => Promise<void>;
+  closeNote: string | null;
+  onClose: (status: OpportunityStatus, note: string) => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [note, setNote] = useState("");
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (status !== "open") {
     return (
-      <div
-        className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide px-2 py-1 border w-fit mb-5"
-        style={{ borderColor: theme.rule, color: theme.paperMuted, fontFamily: sansFont }}
-      >
-        <Lock size={11} />
-        Closed — {statusLabelFor(status)}
+      <div className="mb-5 w-fit">
+        <div
+          className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide px-2 py-1 border"
+          style={{ borderColor: theme.rule, color: theme.paperMuted, fontFamily: sansFont }}
+        >
+          <Lock size={11} />
+          Closed — {statusLabelFor(status)}
+        </div>
+        {closeNote && (
+          <p
+            className="text-[11px] mt-1.5 italic max-w-md"
+            style={{ color: theme.paperMuted, fontFamily: sansFont }}
+          >
+            {closeNote}
+          </p>
+        )}
       </div>
     );
   }
@@ -75,7 +95,7 @@ function CloseOpportunity({
     setClosing(true);
     setError(null);
     try {
-      await onClose(next);
+      await onClose(next, note.trim());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to close opportunity.");
       setClosing(false);
@@ -95,10 +115,22 @@ function CloseOpportunity({
   }
 
   return (
-    <div className="mb-5 p-3 border w-fit" style={{ borderColor: theme.rule, background: theme.panel }}>
+    <div className="mb-5 p-3 border max-w-md" style={{ borderColor: theme.rule, background: theme.panel }}>
       <p className="text-[11px] mb-2.5" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
         Closing cannot be undone. Pick an outcome:
       </p>
+      <label className="text-[11px] uppercase tracking-wide block mb-1" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+        Context (optional)
+      </label>
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        disabled={closing}
+        rows={2}
+        placeholder="Why is this closing this way? e.g. comp came in low, ghosted after onsite…"
+        className="w-full text-xs px-2.5 py-2 outline-none resize-y mb-2.5"
+        style={inputStyle}
+      />
       <div className="flex flex-wrap gap-1.5">
         {CLOSE_STATUSES.map((s) => (
           <button
@@ -244,7 +276,7 @@ export function OpportunityDetail({
         </div>
       </div>
 
-      <CloseOpportunity status={opportunity.status} onClose={onCloseOpportunity} />
+      <CloseOpportunity status={opportunity.status} closeNote={opportunity.closeNote} onClose={onCloseOpportunity} />
 
       <CompanySnapshot research={opportunity.companyResearch} onRegenerate={onRegenerateResearch} />
 

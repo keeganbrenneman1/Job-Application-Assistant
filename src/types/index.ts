@@ -276,6 +276,14 @@ export interface Opportunity {
   // Close Opportunity: "open" until a user explicitly closes it by picking
   // one of the 4 outcomes below. See CLOSE_STATUSES/statusLabelFor above.
   status: OpportunityStatus;
+  // Optional context supplied at close time — why it closed the way it
+  // did (e.g. "comp came in low", "ghosted after onsite"). Null for open
+  // opportunities and for closed ones where the user skipped it. Written
+  // once, at close time, and never edited afterward — same one-way
+  // guarantee as `status` itself, so it stays a trustworthy record for
+  // future across-cycle analysis (why offers happened vs. didn't, common
+  // drop-off reasons) even though no such reporting is built yet.
+  closeNote: string | null;
   createdAt: string;
 }
 
@@ -432,9 +440,11 @@ export interface RegeneratePrepResponse {
 // Close Opportunity (POST .../close): picks one of the 4 closing outcomes
 // and closes the opportunity in the same action — see OpportunityStatus.
 // Only valid while status is still "open"; the route rejects this once an
-// opportunity is already closed (no reopen path — see README).
+// opportunity is already closed (no reopen path — see README). `note` is
+// optional free text captured at close time — see Opportunity.closeNote.
 export interface CloseOpportunityRequest {
   status: Exclude<OpportunityStatus, "open">;
+  note?: string;
 }
 
 export interface CloseOpportunityResponse {

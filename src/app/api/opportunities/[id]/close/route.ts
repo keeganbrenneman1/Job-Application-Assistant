@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOpportunity, setOpportunityStatus } from "@/lib/store";
+import { closeOpportunity, getOpportunity } from "@/lib/store";
 import { CLOSE_STATUSES } from "@/types";
 import type { CloseOpportunityRequest, CloseOpportunityResponse, OpportunityStatus } from "@/types";
 
@@ -15,6 +15,8 @@ const VALID_CLOSE_STATUSES = CLOSE_STATUSES.map((s) => s.id);
 // design (see README "No reopen path"). The confirmation step lives
 // client-side (OpportunityDetail); this route re-validates the "still
 // open" precondition server-side regardless of what the client believes.
+// `note` is optional free-text context captured in the same request (why
+// it closed the way it did) — see Opportunity.closeNote.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -25,7 +27,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { status } = body;
+  const { status, note } = body;
   if (!status || !VALID_CLOSE_STATUSES.includes(status as Exclude<OpportunityStatus, "open">)) {
     return NextResponse.json(
       { error: `status must be one of: ${VALID_CLOSE_STATUSES.join(", ")}.` },
@@ -45,7 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       );
     }
 
-    await setOpportunityStatus(id, status);
+    await closeOpportunity(id, status, note?.trim() || null);
     const updated = await getOpportunity(id);
     if (!updated) {
       return NextResponse.json({ error: "Opportunity not found." }, { status: 404 });

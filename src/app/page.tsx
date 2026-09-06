@@ -252,15 +252,16 @@ export default function App() {
     setActiveOpportunity(data.opportunity as OpportunityWithPreps);
   };
 
-  // Close Opportunity: picks one of the 4 closing outcomes and closes the
-  // opportunity in the same action — see CLOSE_STATUSES in src/types. No
-  // reopen path, enforced server-side too (see .../close/route.ts).
-  const handleCloseOpportunity = async (status: OpportunityStatus) => {
+  // Close Opportunity: picks one of the 4 closing outcomes (plus an
+  // optional note on why) and closes the opportunity in the same action —
+  // see CLOSE_STATUSES in src/types. No reopen path, enforced server-side
+  // too (see .../close/route.ts).
+  const handleCloseOpportunity = async (status: OpportunityStatus, note: string) => {
     if (!activeOpportunity) return;
     const res = await fetch(`/api/opportunities/${activeOpportunity.id}/close`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, note }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to close opportunity.");
