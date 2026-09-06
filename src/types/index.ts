@@ -1,7 +1,9 @@
 // Shared types for the Job Application Assistant.
-// Resume text is deliberately NOT part of any persisted type — it lives only
-// in the request body of a single generation call and is never written
-// to a database, file, or log (see spec "Resume is NOT persisted").
+// Resume text is deliberately NOT part of most persisted types — for a
+// plain opportunity it lives only in the request body of a single
+// generation call and is never written to a database, file, or log. The
+// one exception is `Profile.resumeText` below: resumes persist only when a
+// user explicitly opts into a profile (see the save-as-profile flow).
 
 export type StageType =
   | "recruiter_screen"
@@ -284,6 +286,24 @@ export interface Opportunity {
   // future across-cycle analysis (why offers happened vs. didn't, common
   // drop-off reasons) even though no such reporting is built yet.
   closeNote: string | null;
+  // Optional link to a saved profile this opportunity was created from or
+  // later linked to (see Profile below and the save-as-profile flow). Null
+  // for every opportunity created by manual entry that was never saved as
+  // (or matched to) a profile — the large majority, by design.
+  profileId: string | null;
+  createdAt: string;
+}
+
+// A saved, reusable "who is this opportunity for" — name + resume text —
+// created only via the post-submit save-as-profile prompt (see
+// SaveAsProfileRequest below). Never created, edited, or deleted through
+// any other path this session: no profile management UI. resumeText is
+// nullable only for type symmetry with how a row is read back; in practice
+// the save-as-profile route always supplies one (see its validation).
+export interface Profile {
+  id: string;
+  name: string;
+  resumeText: string | null;
   createdAt: string;
 }
 
@@ -346,6 +366,12 @@ export interface GenerateRequest {
   // finishes creating one — so it has to travel in on the request itself
   // rather than being read back off an existing record.
   additionalContext?: string;
+  // Optional profile selected on the New Opportunity form (see Profile
+  // above). Selecting one only prefills applicantName/resumeText
+  // client-side — both stay fully editable — but this is what actually
+  // links the created opportunity to it. Absent when the user left the
+  // selector blank and typed everything manually.
+  profileId?: string;
 }
 
 // New Opportunity step 1 of 3 (creation only — see POST /api/generate).
@@ -448,5 +474,28 @@ export interface CloseOpportunityRequest {
 }
 
 export interface CloseOpportunityResponse {
+  opportunity: OpportunityWithPreps;
+}
+
+// GET /api/profiles: every saved profile, for the New Opportunity form's
+// optional selector. No filtering/pagination — this is a 2-person tool
+// with a handful of profiles at most, same trade-off as listOpportunities.
+export interface ListProfilesResponse {
+  profiles: Profile[];
+}
+
+// POST /api/opportunities/[id]/save-as-profile: the post-submit prompt's
+// only action (see story 3). Trigger condition — profileId was null on
+// submit AND both fields were manually typed (non-empty) — is checked
+// client-side before this prompt is even shown; the route itself only
+// re-validates that both fields are non-empty and that the opportunity
+// isn't already linked to a profile.
+export interface SaveAsProfileRequest {
+  name: string;
+  resumeText: string;
+}
+
+export interface SaveAsProfileResponse {
+  profile: Profile;
   opportunity: OpportunityWithPreps;
 }

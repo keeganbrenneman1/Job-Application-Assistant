@@ -1,8 +1,11 @@
 -- Job Application Assistant — Supabase schema (v2)
 --
 -- Storage scope per spec: generated preps + opportunity metadata only.
--- Resumes are never written here — the app never has a resume-storage
--- table, column, or bucket by design.
+-- Resumes are never written to a plain opportunity by design. As of v9,
+-- there is exactly one opt-in exception: `profiles.resume_text`, written
+-- only when a user explicitly saves a profile via the save-as-profile
+-- prompt (see the v9 note below). Resumes typed manually and never tied to
+-- a profile are still never persisted anywhere.
 --
 -- No auth / no RLS: this is a named 2-person tool (Keegan + spouse), not a
 -- multi-tenant app. All access happens server-side through the Supabase
@@ -70,6 +73,23 @@
 
 create extension if not exists "pgcrypto";
 
+-- v9: a saved, reusable "who is this opportunity for" — name + resume text
+-- — created only via the New Opportunity form's post-submit "save as
+-- profile" prompt (see src/app/api/opportunities/[id]/save-as-profile).
+-- Created before `opportunities` since that table's profile_id column
+-- references it. Not the v-next "resume profiles" item's full identity/
+-- attribution mechanism — no login, no auth, no per-user siloing; this is
+-- an unauthenticated, opt-in convenience layer shared across both users,
+-- same trust model as the rest of the app. resume_text is the one
+-- deliberate exception to "resumes are never persisted" above — it's
+-- written here, and only here, when a user explicitly opts in.
+create table if not exists profiles (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  resume_text text,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists opportunities (
   id uuid primary key default gen_random_uuid(),
   applicant_name text not null,
@@ -81,10 +101,12 @@ create table if not exists opportunities (
   additional_context text, -- v3: persistent opportunity-wide running note, distinct from preps.additional_context's per-stage one-shot field
   status text not null default 'open' check (status in ('open', 'offered', 'rejected', 'withdrawn', 'ghosted')), -- v8: Close Opportunity — see note above; 'open' is the only non-terminal value
   close_note text, -- v8: optional context captured at close time, see note above
+  profile_id uuid references profiles (id), -- v9: set at creation when the New Opportunity form's profile selector was used, or after the fact by the save-as-profile prompt; null for manual entry never saved as a profile — no backfill for existing rows
   created_at timestamptz not null default now()
 );
 
 create index if not exists opportunities_created_idx on opportunities (created_at desc);
+create index if not exists opportunities_profile_idx on opportunities (profile_id);
 
 -- Deliberately no cross-opportunity "current stage"/reporting column
 -- beyond `status` above — a dashboard/tracker over these statuses is the
@@ -253,6 +275,16 @@ begin
     where table_name = 'opportunities' and column_name = 'close_note'
   ) then
     alter table opportunities add column close_note text;
+  end if;
+
+  -- v9: profiles table is created unconditionally above (guarded by its
+  -- own `if not exists`), so only opportunities.profile_id needs a
+  -- migration guard here for a database created before v9.
+  if not exists (
+    select 1 from information_schema.columns
+    where table_name = 'opportunities' and column_name = 'profile_id'
+  ) then
+    alter table opportunities add column profile_id uuid references profiles (id);
   end if;
 
   -- Unconditional refresh, not just "add if missing": an earlier version

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { theme, sansFont } from "@/lib/theme";
 import { inputStyle, labelClass, labelStyle } from "@/components/formStyles";
 import { JdInputField } from "@/components/JdInputField";
 import { ResumeInputField } from "@/components/ResumeInputField";
 import { SAMPLE_APPLICANT_NAME, SAMPLE_COMPANY, SAMPLE_JD, SAMPLE_RESUME, SAMPLE_ROLE } from "@/lib/sample-data";
-import type { GenerateRequest } from "@/types";
+import type { GenerateRequest, ListProfilesResponse, Profile } from "@/types";
 
 export type NewPrepInput = GenerateRequest;
 
@@ -30,12 +30,32 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
   const [jd, setJd] = useState("");
   const [resume, setResume] = useState("");
   const [additionalContext, setAdditionalContext] = useState("");
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profileId, setProfileId] = useState("");
 
   const [generating, setGenerating] = useState(false);
   const [stage, setStage] = useState("Working…");
   const [error, setError] = useState<string | null>(null);
 
+  // Optional (see README "Profiles") — a blank/failed fetch just means the
+  // selector shows only "None"; manual entry is unaffected either way.
+  useEffect(() => {
+    fetch("/api/profiles")
+      .then((res) => res.json())
+      .then((data: ListProfilesResponse) => setProfiles(data.profiles ?? []))
+      .catch(() => {});
+  }, []);
+
   const canSubmit = applicantName.trim() && company.trim() && role.trim() && jd.trim() && resume.trim() && !generating;
+
+  const handleSelectProfile = (id: string) => {
+    setProfileId(id);
+    const profile = profiles.find((p) => p.id === id);
+    if (profile) {
+      setApplicantName(profile.name);
+      setResume(profile.resumeText ?? "");
+    }
+  };
 
   const handleGenerate = async () => {
     if (!canSubmit) return;
@@ -51,6 +71,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
           resumeText: resume,
           appliedDate: appliedDate || undefined,
           additionalContext: additionalContext.trim() || undefined,
+          profileId: profileId || undefined,
         },
         setStage
       );
@@ -62,6 +83,7 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
   };
 
   const loadSample = () => {
+    setProfileId("");
     setApplicantName(SAMPLE_APPLICANT_NAME);
     setCompany(SAMPLE_COMPANY);
     setRole(SAMPLE_ROLE);
@@ -81,6 +103,30 @@ export function NewPrepForm({ onGenerate }: NewPrepFormProps) {
           Load sample JD + resume
         </button>
       </div>
+
+      {profiles.length > 0 && (
+        <div>
+          <label className={labelClass} style={labelStyle}>
+            Profile <span style={{ opacity: 0.6 }}>(optional)</span>
+          </label>
+          <select
+            value={profileId}
+            onChange={(e) => handleSelectProfile(e.target.value)}
+            className="w-full px-3 py-2.5 text-sm outline-none"
+            style={inputStyle}
+          >
+            <option value="">None — enter manually</option>
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] mt-1.5" style={{ color: theme.paperMuted, fontFamily: sansFont }}>
+            Prefills applicant + resume below — both stay fully editable.
+          </p>
+        </div>
+      )}
 
       <div>
         <label className={labelClass} style={labelStyle}>

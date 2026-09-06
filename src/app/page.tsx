@@ -6,6 +6,7 @@ import { NewPrepForm, type NewPrepInput } from "@/components/NewPrepForm";
 import { LogAppliedForm } from "@/components/LogAppliedForm";
 import { OpportunityDetail } from "@/components/OpportunityDetail";
 import { Archive } from "@/components/Archive";
+import { SaveAsProfilePrompt } from "@/components/SaveAsProfilePrompt";
 import { theme, sansFont } from "@/lib/theme";
 import type {
   CloseOpportunityResponse,
@@ -20,6 +21,7 @@ import type {
   OpportunitySummary,
   OpportunityWithPreps,
   RegenerateResearchResponse,
+  SaveAsProfileResponse,
 } from "@/types";
 
 // Shared by every flow that triggers Call 1 from the client (New
@@ -61,6 +63,17 @@ export default function App() {
   const [archiveLoading, setArchiveLoading] = useState(false);
   const [activeOpportunity, setActiveOpportunity] = useState<OpportunityWithPreps | null>(null);
   const [showLogAppliedForm, setShowLogAppliedForm] = useState(false);
+  // Story 3: set right after a New Opportunity submission whose profileId
+  // was empty and whose applicantName + resumeText were both manually
+  // typed (see handleGenerate below). Purely transient client state — the
+  // banner only shows while it matches the currently-open opportunity, and
+  // clearing it (accept, dismiss, or navigating away) is final: it's never
+  // recomputed from persisted data, so it can't reappear for the same one.
+  const [saveProfilePrompt, setSaveProfilePrompt] = useState<{
+    opportunityId: string;
+    name: string;
+    resumeText: string;
+  } | null>(null);
 
   // Shared across both users — see spec "User & data model". Applicant
   // name is captured per-opportunity (set in the New Prep form itself),
@@ -113,6 +126,18 @@ export default function App() {
     // completed even if generation then fails) instead of the stale,
     // pre-research object from step 1.
     let latestOpportunity = opportunity;
+
+    // Story 3: evaluated right off the (already-saved) opportunity + the
+    // form's own input, independent of whether research/generation below
+    // succeed — the opportunity is saved regardless, so the prompt should
+    // be too. No profile selected AND both fields were manually typed.
+    if (!input.profileId && input.applicantName.trim() && input.resumeText.trim()) {
+      setSaveProfilePrompt({
+        opportunityId: opportunity.id,
+        name: input.applicantName.trim(),
+        resumeText: input.resumeText,
+      });
+    }
 
     try {
       onStage("Researching company…");
@@ -276,7 +301,24 @@ export default function App() {
       window.alert(data.error || "Failed to open opportunity.");
       return;
     }
+    setSaveProfilePrompt(null);
     setActiveOpportunity(data.opportunity as OpportunityWithPreps);
+  };
+
+  // Story 3, accept path: creates a profiles row from the name + resume
+  // the user already typed and links the just-created opportunity to it.
+  const handleSaveAsProfile = async () => {
+    if (!saveProfilePrompt) return;
+    const res = await fetch(`/api/opportunities/${saveProfilePrompt.opportunityId}/save-as-profile`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: saveProfilePrompt.name, resumeText: saveProfilePrompt.resumeText }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to save profile.");
+    const { opportunity } = data as SaveAsProfileResponse;
+    setActiveOpportunity((current) => (current && current.id === opportunity.id ? opportunity : current));
+    setSaveProfilePrompt(null);
   };
 
   const handleDeleteOpportunity = async (id: string) => {
@@ -294,18 +336,30 @@ export default function App() {
   return (
     <Chrome view={view} setView={changeView} wide={showingArchiveList}>
       {activeOpportunity ? (
-        <OpportunityDetail
-          opportunity={activeOpportunity}
-          onGenerateNextStep={handleGenerateNextStep}
-          onGenerateFirstPrep={handleGenerateFirstPrep}
-          onUpdateAppliedDate={handleUpdateAppliedDate}
-          onUpdateAdditionalContext={handleUpdateAdditionalContext}
-          onRegenerateResearch={handleRegenerateResearch}
-          onAddContextEntry={handleAddContextEntry}
-          onRegeneratePrep={handleRegeneratePrep}
-          onCloseOpportunity={handleCloseOpportunity}
-          onBack={() => setActiveOpportunity(null)}
-        />
+        <>
+          {saveProfilePrompt && saveProfilePrompt.opportunityId === activeOpportunity.id && (
+            <SaveAsProfilePrompt
+              name={saveProfilePrompt.name}
+              onSave={handleSaveAsProfile}
+              onDismiss={() => setSaveProfilePrompt(null)}
+            />
+          )}
+          <OpportunityDetail
+            opportunity={activeOpportunity}
+            onGenerateNextStep={handleGenerateNextStep}
+            onGenerateFirstPrep={handleGenerateFirstPrep}
+            onUpdateAppliedDate={handleUpdateAppliedDate}
+            onUpdateAdditionalContext={handleUpdateAdditionalContext}
+            onRegenerateResearch={handleRegenerateResearch}
+            onAddContextEntry={handleAddContextEntry}
+            onRegeneratePrep={handleRegeneratePrep}
+            onCloseOpportunity={handleCloseOpportunity}
+            onBack={() => {
+              setActiveOpportunity(null);
+              setSaveProfilePrompt(null);
+            }}
+          />
+        </>
       ) : view === "new" ? (
         <NewPrepForm onGenerate={handleGenerate} />
       ) : showLogAppliedForm ? (
