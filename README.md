@@ -5,6 +5,34 @@ and current company information, across the whole interview pipeline. Built for
 personal use (Keegan + spouse) during an active job search, and as a portfolio piece
 demonstrating a hybrid grounded-generation architecture (deterministic extraction + live
 search-grounded research + separate reasoning call). Note: Focused on the steps following securing an initial interview right now.
+## What it does (v8)
+Adds a **Close Opportunity** action from the Opportunity Detail page.
+Closing picks one of four outcomes — Offered, Rejected, Withdrawn, or
+Ghosted — there's no separate "closed" boolean: `status` on `opportunities`
+is `"open"` until one of those four is chosen, and picking one closes the
+opportunity in the same action. Closed opportunities stay fully viewable —
+every stage, context log, and prep history remains intact and readable —
+but can no longer advance: Generate Next Step (and the first-prep
+generation path, for an opportunity closed before it ever had a prep) is
+disabled, enforced both client- and server-side regardless of what the
+client believes. No reopen path by design: once closed, no code path ever
+writes `"open"` back, and the close route rejects a second close attempt
+outright — a mistaken close means starting a new opportunity from scratch,
+not fixing this one. Given that cost, the close action requires an explicit
+confirmation ("This will close this opportunity ... and cannot be undone.
+Continue?") before committing. Also supports an optional free-text
+`close_note` captured in the same request — why it closed the way it did,
+e.g. "comp came in low" or "ghosted after onsite" — written once at close
+time and never editable afterward, same one-way guarantee as `status`
+itself; shown on the opportunity's closed badge and as a hover tooltip on
+the Opportunities table. The Opportunities table also gains a sortable
+Status column (Open, or one of the four closed outcomes). Deliberately not
+built this session: no auto-closing based on staleness or time since last
+stage (closing is always a manual, explicit action), no reopen logic of any
+kind, and no dashboard/tracker reporting on these statuses — this only adds
+the ability to set and display status; outcome reporting/analytics is
+separate, backlogged work (see "What's not built yet").
+
 ## What it does (v7)
 Adds an **Export to PDF** trigger on each stage's prep doc — a scoped-down
 slice of the "Share report" item under "What's not built yet" below,
@@ -133,8 +161,11 @@ per-stage field as input to the next stage's generation — plus v5's removal of
 see "What it does (v5)") — plus v6's per-stage Regenerate trigger (Call 2 only, in
 place, using that stage's own current context log — see "What it does (v6)") — plus
 v7's per-stage Export to PDF trigger (no Claude call, renders already-generated
-content via `@react-pdf/renderer` — see "What it does (v7)"). Deployed on Vercel
-with a live `ANTHROPIC_API_KEY` — Call 1 and Call 2 run for real, not mocked.
+content via `@react-pdf/renderer` — see "What it does (v7)") — plus v8's Close
+Opportunity action (`status` + optional `close_note` on `opportunities`; no
+reopen path, Generate Next Step and first-prep generation disabled once closed
+— see "What it does (v8)"). Deployed on Vercel with a live `ANTHROPIC_API_KEY`
+— Call 1 and Call 2 run for real, not mocked.
 
 ## What's not built yet
 Read `V3_HANDOFF.md` for session notes on v3/v4 — decisions behind them that aren't
@@ -143,25 +174,24 @@ context accumulation (a rolling summary across all prior stages, not just the
 immediately preceding one) remains unbuilt — see "What it does (v5)" above for why
 that was deliberately deferred rather than built this session.
 - **v-next:**
-    - “Close Opportunity” marks the end of an interview cycle for a given company/role. Closed opportunities remain fully viewable (all stages, context, and prep history intact) but can no longer advance — no new stages, no Generate Next Step. Status is not a simple open/closed boolean; supports distinct outcome states (e.g., offer, rejected, withdrawn, ghosted/stale) so future dashboard/tracker work can report on outcomes, not just activity. Closing is purely manual — nothing in the app infers or auto-closes based on staleness or time since last stage. No reopen path: closing is treated as effectively permanent, since there’s no legitimate reason to reopen (only mistakes), and a mistaken close requires resubmitting the opportunity from scratch. Given that cost, the close action requires an explicit confirmation step (“This cannot be undone”) baked in from the start, not added later. Not yet scoped: exact status values, where status displays in the opportunities table/list view, whether status is settable independent of closing (e.g., could you mark “offer” without closing) or whether status and closed-state are the same decision made at the same time.
     - Per-user identity/attribution: currently no concept of separate users — v1 was built with no per-user separation. A lightweight mechanism (not necessarily full auth) for the app to know which user an action or piece of data belongs to, and enforce that one user can't view or modify another's. Prerequisite for both "Feedback collection" and "Resume profiles" below — called out once, here, rather than restated inside either.
   - Section-level requests for adjusting the prep doc: Targeted correction for narrow errors that don’t warrant regenerating the whole doc — e.g., a wrong-audience question in the logistics section, when the rest of the doc is fine. Requires Call 2 (or a variant of it) to isolate a specific section of its own prior output and rewrite just that part using new feedback, without touching or re-rolling the sections that were already correct. Real added complexity versus full regen: not just “more context, rerun everything,” but “identify a bounded piece of prior output and revise it in place.” Backlogged separately; full regen (above) should be evaluated first via real usage before deciding whether section-level regen is worth building.
   - Resume profiles, split into two dependent parts:
       - Opt-in resume storage for reuse — a user can choose to create a profile and save resume(s) for reuse across opportunities. Strictly opt-in (app remains fully usable without one) and strictly siloed (no user can view/access another's). Blocked on per-user identity/attribution, above.
-      - Resume recommendations from outcomes — using outcome data across a user's closed opportunities to suggest resume refinements over time (a resume as a living artifact, improved by accumulated real signal). Blocked on per-user identity/attribution AND Close Opportunity's outcome/status data. Minimum sample size per resume version not yet scoped.
+      - Resume recommendations from outcomes — using outcome data across a user's closed opportunities to suggest resume refinements over time (a resume as a living artifact, improved by accumulated real signal). The outcome/status data itself now exists (v8's `status` + `close_note` on `opportunities`); still blocked on per-user identity/attribution, above, since this needs to reason over one user's outcomes specifically. Minimum sample size per resume version not yet scoped.
   - Feedback collection AND use, kept together as one item (not split into phases) to extend into the post-interview part of the job search lifecycle — blocked on per-user identity/attribution, above
   - ”Share report” option to create a PDF of a whole opportunity, all stages combined, with each question in each stage expanded. v7 built the single-stage slice of this (see "What it does (v7)") — the user can already export one stage's prep doc to PDF and share it or bring it to the live interview; what remains here is specifically the whole-opportunity, all-stages-combined version, deliberately not built in that session.
   - UX
     - General legibility clean up
     - Broader PDF-extraction goal: ideal state is uploading a JD PDF and a resume PDF and having everything auto-extracted (e.g. applicant name currently isn't pulled from the resume) — not just the current lightweight Call 0 field-extraction path
   - Interactive mock Q&A
-  - Stage-by-stage tracker/dashboard
+  - Stage-by-stage tracker/dashboard — v8 added the per-opportunity `status`/`close_note` this would report on, but no cross-opportunity reporting or analytics is built yet; this item is that reporting layer
   - Persisted/reusable named interview-stage-sequence templates
   - Changing the data model to no-auth/shareable-via-link for anyone — flagged as a major re-architecture, not a checkbox: reopens cost guardrails, the ephemeral-resume/interviewer-PDF privacy stance, and company-research caching, all currently designed around "two known people," not the general public
   - Resume optimization to extend into the pre-interview part of the job application lifecycle
 
 ## Someday, not scoped (fuzzy, no committed version)
-- **Big-picture vision:** extend beyond interview-cycle prep into resume optimization — per-JD tailoring (repurposing Call 1 research + Call 2 fit reasoning, positioned before submission rather than after a screen is scheduled) AND informed by accumulated feedback across opportunities over time. Also wants something useful to come out of failed/closed opportunities specifically — implies an outcome/status field (rejected, no response, withdrawn) the current data model doesn't capture. Depends on the same feedback-attribution question above being resolved first.
+- **Big-picture vision:** extend beyond interview-cycle prep into resume optimization — per-JD tailoring (repurposing Call 1 research + Call 2 fit reasoning, positioned before submission rather than after a screen is scheduled) AND informed by accumulated feedback across opportunities over time. Also wants something useful to come out of failed/closed opportunities specifically — v8's outcome/status field (rejected, withdrawn, ghosted, offered) supplies the raw data this needs; turning it into recommendations still depends on the same feedback-attribution question above being resolved first.
 - **Conversational refinement of a prep doc:** after initial generation, a chat-style back-and-forth to react/correct/add context and have the doc evolve — different from v3's one-shot field or v6's static, full-doc-only Regenerate trigger (above). Needs multi-turn conversation storage per stage-prep and a decision on full-doc vs. section-level regeneration per turn.
 
 
@@ -182,6 +212,14 @@ in an in-memory store that resets on restart — enough to exercise the full flo
 a Supabase project exists. Run `src/lib/supabase/schema.sql` against a Supabase project
 to enable real persistence. Use the "Load sample JD + resume" link on the New Prep tab
 for a cold-start demo without a real resume on hand.
+
+**Already have a Supabase project from an earlier version?** Re-run the current
+`src/lib/supabase/schema.sql` against it (Supabase dashboard → SQL Editor → paste the
+whole file → Run) whenever you pull a change that touches the schema — every statement
+in it is guarded (`if not exists` / `if exists`), so it's a safe no-op for columns/tables
+you already have and only adds what's new (e.g. v8's `status` and `close_note`). A
+"Could not find the '...' column ... in the schema cache" error from the app is this:
+the code expects a column the database doesn't have yet.
 
 ## Process
 Built using a spec-first, prototype-before-code process — see `JOB_APPLICATION_ASSISTANT_SPEC.md`
