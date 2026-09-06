@@ -261,6 +261,7 @@ export function Archive({ items, loading, onOpen, onDelete, onLogApplied }: Arch
                 <td
                   className={cellClass + " text-xs"}
                   style={{ color: item.status === "open" ? theme.paperMuted : theme.brass }}
+                  title={item.closeNote ?? undefined}
                 >
                   {statusDisplay(item)}
                 </td>

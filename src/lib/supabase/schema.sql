@@ -62,6 +62,11 @@
 --   no status" note below refers to — that note was about cross-opportunity
 --   reporting/analytics, which this session still does not add; this
 --   column only backs the close action and its display.
+-- - `opportunities` also gain `close_note` (nullable text): optional free
+--   text captured in the same close request, e.g. why an offer didn't pan
+--   out. Written once at close time and never updated afterward — same
+--   one-way guarantee as `status`. Intentionally a plain column, not a
+--   table, since it's one fact tied 1:1 to the close event, not a log.
 
 create extension if not exists "pgcrypto";
 
@@ -75,6 +80,7 @@ create table if not exists opportunities (
   applied_date date, -- nullable: unset for a "Log Applied" quick-add until the user sets it, or for pre-existing opportunities until backfilled
   additional_context text, -- v3: persistent opportunity-wide running note, distinct from preps.additional_context's per-stage one-shot field
   status text not null default 'open' check (status in ('open', 'offered', 'rejected', 'withdrawn', 'ghosted')), -- v8: Close Opportunity — see note above; 'open' is the only non-terminal value
+  close_note text, -- v8: optional context captured at close time, see note above
   created_at timestamptz not null default now()
 );
 
@@ -240,6 +246,13 @@ begin
     alter table opportunities add constraint opportunities_status_check check (
       status in ('open', 'offered', 'rejected', 'withdrawn', 'ghosted')
     );
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns
+    where table_name = 'opportunities' and column_name = 'close_note'
+  ) then
+    alter table opportunities add column close_note text;
   end if;
 
   -- Unconditional refresh, not just "add if missing": an earlier version

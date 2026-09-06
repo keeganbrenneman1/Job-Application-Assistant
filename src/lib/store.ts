@@ -77,6 +77,7 @@ export async function createOpportunity(
     appliedDate,
     additionalContext,
     status: "open",
+    closeNote: null,
     createdAt: new Date().toISOString(),
   };
   memoryDB().opportunities.unshift(opportunity);
@@ -146,24 +147,33 @@ export async function setOpportunityAdditionalContext(
   if (opportunity) opportunity.additionalContext = additionalContext;
 }
 
-// Close Opportunity: sets status to one of the 4 closing outcomes. Callers
-// (the close route) are responsible for only calling this while status is
-// still "open" — there is no reopen path, and this function itself does
-// not re-check the current value, same division of responsibility as the
-// rest of store.ts (e.g. addContextEntry's "open stage" rule).
-export async function setOpportunityStatus(
+// Close Opportunity: sets status to one of the 4 closing outcomes, plus an
+// optional note captured in the same request (see Opportunity.closeNote).
+// Callers (the close route) are responsible for only calling this while
+// status is still "open" — there is no reopen path, and this function
+// itself does not re-check the current value, same division of
+// responsibility as the rest of store.ts (e.g. addContextEntry's "open
+// stage" rule). Both fields are written once, together, and never again.
+export async function closeOpportunity(
   opportunityId: string,
-  status: OpportunityStatus
+  status: OpportunityStatus,
+  note: string | null
 ): Promise<void> {
   const supabase = getSupabase();
   if (supabase) {
-    const { error } = await supabase.from("opportunities").update({ status }).eq("id", opportunityId);
-    if (error) throw new Error(`setOpportunityStatus: ${error.message}`);
+    const { error } = await supabase
+      .from("opportunities")
+      .update({ status, close_note: note })
+      .eq("id", opportunityId);
+    if (error) throw new Error(`closeOpportunity: ${error.message}`);
     return;
   }
 
   const opportunity = memoryDB().opportunities.find((o) => o.id === opportunityId);
-  if (opportunity) opportunity.status = status;
+  if (opportunity) {
+    opportunity.status = status;
+    opportunity.closeNote = note;
+  }
 }
 
 // Call 1's research result, persisted once and reused for every later
@@ -416,6 +426,7 @@ function rowToOpportunity(row: any): Opportunity {
     appliedDate: row.applied_date ?? null,
     additionalContext: row.additional_context ?? null,
     status: row.status ?? "open",
+    closeNote: row.close_note ?? null,
     createdAt: row.created_at,
   };
 }
